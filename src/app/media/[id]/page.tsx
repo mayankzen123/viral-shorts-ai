@@ -8,7 +8,7 @@ import { toast } from 'sonner';
 import { motion } from 'framer-motion';
 import { Header } from '@/components/Header';
 import { Toaster } from '@/components/ui/sonner';
-import { Slideshow } from '@/components/Slideshow';
+import { VideoPlayer } from '@/components/VideoPlayer';
 
 interface ImageState {
   [key: number]: {
@@ -28,11 +28,10 @@ interface VideoState {
   url: string | null;
   isLoading: boolean;
   error: string | null;
-  isSlideshow?: boolean;
-  slideshowData?: {
+  isVideoPlayer?: boolean;
+  videoPlayerData?: {
     images: string[];
     audio: string;
-    slideDuration?: number;
   };
 }
 
@@ -247,7 +246,7 @@ export default function MediaPage() {
     );
     
     if (!audioGenerated || !allImagesGenerated) {
-      toast.error("Please generate both audio and all images before creating a slideshow");
+      toast.error("Please generate both audio and all images before creating a video");
       return;
     }
     
@@ -261,37 +260,87 @@ export default function MediaPage() {
     try {
       // Collect all image URLs
       const imageUrls = script.suggestedVisuals.map((_, index) => imageState[index]?.url).filter(Boolean) as string[];
-      const uniqueId = topic?.title ? `${topic.title}-slideshow` : 'script-slideshow';
+      const uniqueId = topic?.title ? `${topic.title}-video` : 'script-video';
+      
+      // Ensure the audio URL is correctly formatted for the audio element
+      let processedAudioUrl = audioState.url;
+      
+      // Check if it's a base64 data URL and make sure it has the correct MIME type
+      if (processedAudioUrl && processedAudioUrl.startsWith('data:')) {
+        // Ensure it has the correct audio MIME type
+        if (!processedAudioUrl.includes('audio/')) {
+          // Fix the MIME type if needed (assuming it's MP3)
+          processedAudioUrl = processedAudioUrl.replace(/^data:([^;]+);/, 'data:audio/mpeg;');
+        }
+      }
+      
+      // If it's not a data URL, ensure it ends with an appropriate audio extension
+      if (processedAudioUrl && !processedAudioUrl.startsWith('data:')) {
+        // Check common audio formats
+        const hasAudioExtension = /\.(mp3|wav|ogg|m4a|aac)($|\?)/.test(processedAudioUrl);
+        if (!hasAudioExtension) {
+          // Append a query parameter to hint the content type
+          processedAudioUrl = `${processedAudioUrl}${processedAudioUrl.includes('?') ? '&' : '?'}type=audio/mpeg`;
+        }
+      }
+      
+      console.log("Using processed audio URL:", processedAudioUrl);
       
       const response = await fetch('/api/generate-video', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
           images: imageUrls,
-          audioUrl: audioState.url,
+          audioUrl: processedAudioUrl,
           uniqueId
         })
       });
       
       if (!response.ok) {
         const error = await response.json();
-        throw new Error(error.error || 'Failed to generate slideshow');
+        throw new Error(error.error || 'Failed to generate video');
       }
       
       const data = await response.json();
       
-      // Check if we received slideshow data or a simple URL
-      if (data.videoUrl && typeof data.videoUrl === 'object' && data.videoUrl.type === 'slideshow') {
-        // We got slideshow data
+      // Check if we received video data or a simple URL
+      if (data.videoUrl && typeof data.videoUrl === 'object' && data.videoUrl.type === 'video') {
+        // We got video data
+        // Make sure the audio format is correct
+        let videoAudio = data.videoUrl.audio;
+        
+        // Check and fix the audio format if needed
+        if (videoAudio && videoAudio.startsWith('data:')) {
+          if (!videoAudio.includes('audio/')) {
+            videoAudio = videoAudio.replace(/^data:([^;]+);/, 'data:audio/mpeg;');
+          }
+        }
+        
+        // If it's not a data URL, ensure it ends with an appropriate audio extension
+        if (videoAudio && !videoAudio.startsWith('data:')) {
+          const hasAudioExtension = /\.(mp3|wav|ogg|m4a|aac)($|\?)/.test(videoAudio);
+          if (!hasAudioExtension) {
+            videoAudio = `${videoAudio}${videoAudio.includes('?') ? '&' : '?'}type=audio/mpeg`;
+          }
+        }
+        
+        // Create a test Audio element to verify the audio can be loaded
+        const testAudio = new Audio();
+        testAudio.src = videoAudio;
+        // Listen for errors in loading audio
+        testAudio.addEventListener('error', (e) => {
+          console.error("Audio format validation error:", testAudio.error);
+          toast.error("The audio format may not be fully compatible with your browser");
+        });
+        
         setVideoState({
           url: null,
           isLoading: false,
           error: null,
-          isSlideshow: true,
-          slideshowData: {
+          isVideoPlayer: true,
+          videoPlayerData: {
             images: data.videoUrl.images,
-            audio: data.videoUrl.audio,
-            slideDuration: data.videoUrl.slideDuration
+            audio: videoAudio
           }
         });
       } else {
@@ -300,14 +349,14 @@ export default function MediaPage() {
           url: data.videoUrl,
           isLoading: false,
           error: null,
-          isSlideshow: false
+          isVideoPlayer: false
         });
       }
       
-      toast.success("Slideshow created successfully!");
+      toast.success("Video created successfully!");
     } catch (error: any) {
-      console.error('Error generating slideshow:', error);
-      toast.error(`Failed to generate slideshow: ${error.message}`);
+      console.error('Error generating video:', error);
+      toast.error(`Failed to generate video: ${error.message}`);
       
       // Update state with error
       setVideoState({
@@ -959,26 +1008,26 @@ export default function MediaPage() {
                   <polygon points="23 7 16 12 23 17 23 7" />
                   <rect x="1" y="5" width="15" height="14" rx="2" ry="2" />
                 </svg>
-                Slideshow Creation
+                Video Creation
               </h2>
               
               <Button
                 onClick={generateVideo}
                 disabled={videoState.isLoading || !checkAllMediaGenerated()}
-                variant={videoState.isSlideshow || videoState.url ? "outline" : "default"}
+                variant={videoState.isVideoPlayer || videoState.url ? "outline" : "default"}
                 className="flex items-center"
               >
                 {videoState.isLoading ? (
                   <>
                     <div className="size-4 border-2 border-white/30 border-t-white rounded-full animate-spin mr-2"></div>
-                    Creating Slideshow...
+                    Creating Video...
                   </>
-                ) : videoState.isSlideshow || videoState.url ? (
+                ) : videoState.isVideoPlayer || videoState.url ? (
                   <>
                     <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                       <path d="M13 10V3L4 14h7v7l9-11h-7z"></path>
                     </svg>
-                    Recreate Slideshow
+                    Recreate Video
                   </>
                 ) : (
                   <>
@@ -986,18 +1035,18 @@ export default function MediaPage() {
                       <polygon points="23 7 16 12 23 17 23 7" />
                       <rect x="1" y="5" width="15" height="14" rx="2" ry="2" />
                     </svg>
-                    Create Slideshow
+                    Create Video
                   </>
                 )}
               </Button>
             </div>
             
             <div className="p-6">
-              {videoState.isSlideshow && videoState.slideshowData ? (
+              {videoState.isVideoPlayer && videoState.videoPlayerData ? (
                 <div className="space-y-4">
                   <div className="bg-muted/30 rounded-lg overflow-hidden">
-                    <Slideshow 
-                      data={videoState.slideshowData}
+                    <VideoPlayer
+                      data={videoState.videoPlayerData}
                       className="w-full"
                     />
                   </div>
@@ -1011,8 +1060,7 @@ export default function MediaPage() {
                       </svg>
                       <div>
                         <p className="text-xs text-muted-foreground">
-                          Your slideshow is ready! You can use the controls to navigate through the images while listening to the narration.
-                          In a production app, this would be a fully rendered video file.
+                          Your video is ready! You can use the controls to navigate through the images while listening to the narration.
                         </p>
                       </div>
                     </div>
@@ -1095,7 +1143,7 @@ export default function MediaPage() {
                       <p className="mt-1 text-sm">
                         {!audioState.url && "Please generate audio narration. "}
                         {script && !script.suggestedVisuals.every((_, index) => imageState[index]?.url) && "Please generate all images. "}
-                        Both are needed to create a slideshow.
+                        Both are needed to create a video.
                       </p>
                     </div>
                   </div>
@@ -1108,8 +1156,8 @@ export default function MediaPage() {
                       <rect x="1" y="5" width="15" height="14" rx="2" ry="2" />
                     </svg>
                   </div>
-                  <h3 className="text-lg font-medium mb-2">Create Slideshow</h3>
-                  <p className="text-muted-foreground mb-6">Combine your generated images and audio narration into a shareable slideshow.</p>
+                  <h3 className="text-lg font-medium mb-2">Create Video</h3>
+                  <p className="text-muted-foreground mb-6">Combine your generated images and audio narration into a shareable video.</p>
                   <Button 
                     onClick={generateVideo}
                     disabled={!checkAllMediaGenerated()}

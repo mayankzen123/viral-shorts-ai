@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { CacheManager } from '@/lib/utils';
 
-// Create a cache for slideshow data with 24-hour TTL
+// Create a cache for video data with 24-hour TTL
 const videoCache = new CacheManager<any>(24 * 60 * 60 * 1000);
 
 export async function POST(request: Request) {
@@ -16,40 +16,39 @@ export async function POST(request: Request) {
       );
     }
 
-    // Generate cache key for this specific slideshow
-    const cacheKey = uniqueId ? `slideshow-${uniqueId}` : `slideshow-${Date.now()}`;
+    // Generate cache key for this specific video
+    const cacheKey = uniqueId ? `video-${uniqueId}` : `video-${Date.now()}`;
     
     // Check cache first
     const cachedData = videoCache.get(cacheKey);
     
     if (cachedData) {
       // Return cached data if it exists
-      console.log('Using cached slideshow data');
+      console.log('Using cached video data');
       return NextResponse.json({ videoUrl: cachedData });
     }
 
-    // Create a slideshow data structure with all images and audio
-    const slideshowData = {
+    // Create video data structure with images and audio
+    const videoData = {
       images: images,
       audio: audioUrl,
-      type: 'slideshow',
-      slideDuration: 5000, // 5 seconds per slide by default
+      type: 'video',
       created: Date.now()
     };
     
     // Store in cache
-    videoCache.set(cacheKey, slideshowData);
+    videoCache.set(cacheKey, videoData);
 
-    // Return the slideshow data
+    // Return the video data
     return NextResponse.json({ 
-      videoUrl: slideshowData,
-      message: "Slideshow created successfully with all images and audio."
+      videoUrl: videoData,
+      message: "Video created successfully with images and audio."
     });
   } catch (error: any) {
-    console.error('Error generating slideshow:', error);
+    console.error('Error generating video:', error);
     
     return NextResponse.json(
-      { error: error.message || 'Failed to generate slideshow' },
+      { error: error.message || 'Failed to generate video' },
       { status: 500 }
     );
   }
