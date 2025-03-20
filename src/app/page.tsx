@@ -152,7 +152,7 @@ export default function Home() {
     
     try {
       setScriptGenerationState('loading');
-      const scriptData = await generateScript(topic.title, selectedCategory);
+      const scriptData = await generateScript(topic.title, selectedCategory, topic.description);
       
       if (scriptData) {
         setScriptGenerationState('success');

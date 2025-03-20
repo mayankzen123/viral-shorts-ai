@@ -13,67 +13,135 @@ const scriptCache = new CacheManager<Script>(60 * 60 * 1000);
 
 export async function POST(request: Request) {
   try {
-    const { topic, category } = await request.json();
+    // Extract request data
+    const { topic, category, description } = await request.json();
 
+    // Validate required fields
     if (!topic || !category) {
-      return NextResponse.json({ error: "Topic and category are required" }, { status: 400 });
+      return NextResponse.json(
+        { error: "Topic and category are required" }, 
+        { status: 400 }
+      );
     }
-
-    // Check cache first
-    const cacheKey = `script-${category}-${topic}`;
-    const cachedScript = scriptCache.get(cacheKey);
     
+    // Generate cache key with description if available
+    const cacheKey = description 
+      ? `script-${category}-${topic}-${description.substring(0, 20)}` 
+      : `script-${category}-${topic}`;
+    
+    // Check cache first
+    const cachedScript = scriptCache.get(cacheKey);
     if (cachedScript) {
-      // Return cached data if it exists
       return NextResponse.json(cachedScript);
     }
 
-    // Use OpenAI to generate a script
-    const response = await openai.chat.completions.create({
-      model: "gpt-4o",
-      messages: [
-        {
-          role: "system",
-          content: `You are an expert scriptwriter for short-form videos. 
-          Create a 60-90 second script for a video on ${topic} in the ${category} category.
-          The script should be engaging, informative, and optimized for social media.
-          The format should include a hook (5-7 seconds), main content (40-60 seconds), 
-          a call to action (5-7 seconds), and 5 suggested visuals.
-          The response should be ONLY valid JSON without any markdown formatting or explanations.`
-        },
-        {
-          role: "user",
-          content: `Write a script for a short video about "${topic}" in the ${category} category.`
-        }
-      ],
-      response_format: { type: "json_object" }
-    });
-
-    const content = response.choices[0].message.content || '{}';
+    // Generate script using OpenAI
+    const script = await generateScriptWithAI(topic, category, description);
     
-    try {
-      const scriptData = JSON.parse(content);
-      
-      // Ensure the script has the required structure
-      const script: Script = {
-        hook: scriptData.hook || "",
-        mainContent: scriptData.mainContent || "",
-        callToAction: scriptData.callToAction || "",
-        suggestedVisuals: Array.isArray(scriptData.suggestedVisuals) 
-          ? scriptData.suggestedVisuals 
-          : []
-      };
-      
-      // Store in cache
-      scriptCache.set(cacheKey, script);
-      
-      return NextResponse.json(script);
-    } catch (parseError) {
-      console.error('Error parsing OpenAI response:', parseError);
-      return NextResponse.json({ error: 'Invalid script format received' }, { status: 500 });
-    }
+    // Store in cache
+    scriptCache.set(cacheKey, script);
+    
+    return NextResponse.json(script);
   } catch (error) {
-    console.error('Error generating script:', error);
-    return NextResponse.json({ error: 'Failed to generate script' }, { status: 500 });
+    console.error('Error in script generation API:', error);
+    return NextResponse.json(
+      { error: 'Failed to generate script' }, 
+      { status: 500 }
+    );
   }
+}
+
+/**
+ * Generates a script using OpenAI
+ */
+async function generateScriptWithAI(topic: string, category: string, description?: string): Promise<Script> {
+  // Call OpenAI API
+  const response = await openai.chat.completions.create({
+    model: "gpt-4o",
+    messages: [
+      {
+        role: "system",
+        content: `You are an expert scriptwriter for viral short-form videos. 
+        Create a 60-90 second script for a video on ${topic} in the ${category} category.
+        ${description ? `Additional context about the topic: ${description}` : ''}
+        
+        The script should be extremely engaging, catchy, and optimized for social media to maximize shares and subscribers.
+        Use techniques that grab attention in the first 3 seconds, create emotional connection, and include a strong call to action.
+        
+        Return your response in the EXACT following JSON format:
+        {
+          "hook": "A 5-7 second attention-grabbing opening that immediately hooks the viewer",
+          "mainContent": "40-60 seconds of informative, entertaining content about the topic",
+          "callToAction": "A 5-7 second compelling call to action that encourages subscriptions",
+          "suggestedVisuals": ["Visual 1", "Visual 2", "Visual 3", "Visual 4", "Visual 5"]
+        }
+        
+        The response should be ONLY valid JSON without any markdown formatting or explanations.
+        Use the EXACT field names as shown above.`
+      },
+      {
+        role: "user",
+        content: `Write a highly engaging script for a viral short video about "${topic}" in the ${category} category.${description ? ` The topic is about: ${description}` : ''} Make it catchy enough to attract subscribers.`
+      }
+    ],
+    response_format: { type: "json_object" }
+  });
+
+  // Parse the response
+  const content = response.choices[0].message.content || '{}';
+  
+  try {
+    const scriptData = JSON.parse(content);
+    
+    // Primary field names based on our prompt
+    let script: Script = {
+      hook: scriptData.hook || "",
+      mainContent: scriptData.mainContent || "",
+      callToAction: scriptData.callToAction || "",
+      suggestedVisuals: Array.isArray(scriptData.suggestedVisuals) ? scriptData.suggestedVisuals : []
+    };
+    
+    // Check if we got an empty response but have alternative field names
+    if (!script.hook && !script.mainContent && !script.callToAction) {
+      // Try alternative field names as a fallback
+      script = {
+        hook: findValue(scriptData, ['Hook', 'opening', 'Opening', 'introduction', 'Introduction']),
+        mainContent: findValue(scriptData, ['MainContent', 'content', 'Content', 'body', 'Body']),
+        callToAction: findValue(scriptData, ['CallToAction', 'cta', 'CTA', 'conclusion', 'Conclusion']),
+        suggestedVisuals: findVisuals(scriptData)
+      };
+    }
+    
+    return script;
+  } catch (parseError) {
+    console.error('Error parsing OpenAI response:', parseError);
+    throw new Error('Invalid script format received');
+  }
+}
+
+/**
+ * Helper to find a value from multiple possible keys
+ */
+function findValue(obj: Record<string, any>, possibleKeys: string[]): string {
+  for (const key of possibleKeys) {
+    if (obj[key] && typeof obj[key] === 'string') {
+      return obj[key];
+    }
+  }
+  return "";
+}
+
+/**
+ * Helper to find visuals from multiple possible keys
+ */
+function findVisuals(obj: Record<string, any>): string[] {
+  const visualKeys = ['suggestedVisuals', 'SuggestedVisuals', 'visuals', 'Visuals'];
+  
+  for (const key of visualKeys) {
+    if (Array.isArray(obj[key])) {
+      return obj[key];
+    }
+  }
+  
+  return [];
 } 

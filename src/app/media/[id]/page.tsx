@@ -194,10 +194,32 @@ export default function MediaPage() {
       
       // Auto-play the audio if available
       if (audioRef.current && data.audioUrl) {
+        // Set the source first
         audioRef.current.src = data.audioUrl;
+        
+        // Wait for the audio to be loaded before attempting to play
+        const playAudio = () => {
+          // Only play if the audio is fully loaded and ready
+          if (audioRef.current && audioRef.current.readyState >= 2) {
+            audioRef.current.play()
+              .catch(err => {
+                console.warn('Error auto-playing audio:', err);
+                // User may need to interact with the page first due to browser autoplay policies
+              });
+          }
+        };
+        
+        // Add event listener for when the audio is loaded enough to play
+        audioRef.current.addEventListener('loadeddata', playAudio, { once: true });
+        
+        // Also set a timeout as a fallback
         setTimeout(() => {
-          audioRef.current?.play();
-        }, 500);
+          // Remove the event listener if it hasn't fired yet
+          if (audioRef.current) {
+            audioRef.current.removeEventListener('loadeddata', playAudio);
+            playAudio();
+          }
+        }, 1000);
       }
       
       toast.success("Audio narration generated successfully!");

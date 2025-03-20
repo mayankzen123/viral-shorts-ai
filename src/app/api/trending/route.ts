@@ -1,15 +1,10 @@
 import { OpenAI } from 'openai';
 import { NextResponse } from 'next/server';
 import { TrendingTopicsResponse } from '@/types';
-import { CacheManager } from '@/lib/utils';
-
 // Initialize OpenAI client
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
-
-// Create a cache for trending topics with 15-minute TTL
-const trendingCache = new CacheManager<TrendingTopicsResponse>(15 * 60 * 1000);
 
 export async function POST(request: Request) {
   try {

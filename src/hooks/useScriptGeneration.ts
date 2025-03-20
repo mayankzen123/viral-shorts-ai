@@ -8,27 +8,29 @@ export function useScriptGeneration() {
   const [isGenerating, setIsGenerating] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
-  const generateScript = useCallback(async (topic: string, category: Category): Promise<Script | null> => {
+  const generateScript = useCallback(async (topic: string, category: Category, description?: string): Promise<Script | null> => {
     setIsGenerating(true);
     setError(null);
     
     try {
-      // For demo purposes, instead of making an API call, we'll return mock data
-      return new Promise((resolve) => {
-        setTimeout(() => {
-          // Generate a realistic mock script based on the topic and category
-          const mockScript: Script = {
-            hook: generateHook(topic, category),
-            mainContent: generateMainContent(topic, category),
-            callToAction: generateCallToAction(topic, category),
-            suggestedVisuals: generateVisuals(topic, category),
-          };
-          
-          setScript(mockScript);
-          setIsGenerating(false);
-          resolve(mockScript);
-        }, 2000);
+      // Make a real API call to the generate-script endpoint
+      const response = await fetch('/api/generate-script', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ topic, category, description }),
       });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to generate script');
+      }
+      
+      const data = await response.json();
+      setScript(data);
+      setIsGenerating(false);
+      return data;
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to generate script');
       setIsGenerating(false);
