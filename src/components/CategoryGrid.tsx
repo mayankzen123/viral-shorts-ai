@@ -115,6 +115,16 @@ const CATEGORIES: {
       border: "border-blue-100 dark:border-blue-900/30"
     }
   },
+  { 
+    value: 'space_exploration', 
+    label: 'Space Exploration',
+    icon: <svg xmlns="http://www.w3.org/2000/svg" className="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="4"/><path d="M12 2v4"/><path d="M12 18v4"/><path d="m4.93 4.93 2.83 2.83"/><path d="m16.24 16.24 2.83 2.83"/><path d="M2 12h4"/><path d="M18 12h4"/><path d="m4.93 19.07 2.83-2.83"/><path d="m16.24 7.76 2.83-2.83"/></svg>,
+    theme: {
+      gradient: "from-indigo-500 to-purple-700",
+      background: "bg-indigo-50 dark:bg-indigo-950/30",
+      border: "border-indigo-100 dark:border-indigo-900/30"
+    }
+  },
 ];
 
 interface CategoryGridProps {

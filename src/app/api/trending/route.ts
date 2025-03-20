@@ -13,58 +13,61 @@ const trendingCache = new CacheManager<TrendingTopicsResponse>(15 * 60 * 1000);
 
 export async function POST(request: Request) {
   try {
+    // Get category from request
     const { category } = await request.json();
-
     if (!category) {
       return NextResponse.json({ error: "Category is required" }, { status: 400 });
     }
 
-    // Check cache first
-    const cacheKey = `trending-topics-${category}`;
-    const cachedTopics = trendingCache.get(cacheKey);
-    
-    if (cachedTopics) {
-      // Return cached data if it exists
-      return NextResponse.json(cachedTopics);
-    }
-
-    // Use OpenAI to get trending topics
-    const response = await openai.chat.completions.create({
+    // Fetch trending topics using OpenAI
+    const response = await openai.responses.create({
       model: "gpt-4o",
-      messages: [
-        {
-          role: "system",
-          content: `You are a trend analyst specializing in ${category}. 
-          Provide the top 10 trending topics in this field right now in JSON format.
-          For each topic, include: title, description, viralScore (1-100), 
-          dateStarted (YYYY-MM-DD), and estimatedPopularity (low, medium, high, very high).
-          The response should be ONLY valid JSON without any markdown formatting or explanations.
-          Format the response as: {"trendingTopics": [...array of topic objects...]}`
-        },
-        {
-          role: "user",
-          content: `What are the top 10 trending topics in ${category} right now?`
-        }
-      ],
-      response_format: { type: "json_object" }
+      tools: [{ type: "web_search_preview" }],
+      input: `You are a viral trend analyst specializing in ${category}. 
+        Search for and identify ONLY the most 10 recent trending topics in ${category} from the LAST 5-6 DAYS that have HIGH VIRAL POTENTIAL.
+
+        For each trending topic, provide:
+        - title: A concise, catchy title for the trend
+        - description: A clear explanation of what the trend is about (1-2 sentences)
+        - viralScore: A number between 70-100 representing viral potential (higher = more viral)
+        - dateStarted: The date when this topic started trending (within the last 5-6 days)
+        - estimatedPopularity: Choose from: "medium", "high", or "very high"
+        
+        Format your response as VALID JSON ONLY: {"trendingTopics": [...array of topic objects...]}
+        Do NOT include any markdown formatting, explanations, or text outside the JSON structure.`
     });
 
-    const content = response.choices[0].message.content || '{"trendingTopics":[]}';
+    // Parse the response
+    const outputText = response.output_text || '{"trendingTopics":[]}';
+    const cleanedOutput = outputText.trim().replace(/```json\n?|\n?```/g, '');
     
+    // Try to parse response as JSON
     try {
-      const parsedContent = JSON.parse(content) as TrendingTopicsResponse;
+      const parsedContent = JSON.parse(cleanedOutput) as TrendingTopicsResponse;
       
-      // Store in cache
-      trendingCache.set(cacheKey, parsedContent);
+      // Ensure we have a valid trending topics array
+      if (parsedContent.trendingTopics && Array.isArray(parsedContent.trendingTopics)) {
+        return NextResponse.json(parsedContent);
+      }
       
-      // Pass through the data structure as is - either topics or trendingTopics
-      return NextResponse.json(parsedContent);
-    } catch (parseError) {
-      console.error('Error parsing OpenAI response:', parseError);
-      return NextResponse.json({ error: 'Invalid trend data format received' }, { status: 500 });
+      throw new Error('Invalid response structure');
+    } catch (error) {
+      // Try regex extraction as fallback
+      const jsonMatch = outputText.match(/\{[\s\S]*"trendingTopics"[\s\S]*\}/);
+      if (jsonMatch) {
+        try {
+          const extractedContent = JSON.parse(jsonMatch[0]) as TrendingTopicsResponse;
+          if (extractedContent.trendingTopics && Array.isArray(extractedContent.trendingTopics)) {
+            return NextResponse.json(extractedContent);
+          }
+        } catch (e) {
+          // Fallback extraction failed
+        }
+      }
+      
+      return NextResponse.json({ error: 'Failed to parse trending topics' }, { status: 500 });
     }
   } catch (error) {
-    console.error('Error fetching trending topics:', error);
     return NextResponse.json({ error: 'Failed to fetch trending topics' }, { status: 500 });
   }
 } 

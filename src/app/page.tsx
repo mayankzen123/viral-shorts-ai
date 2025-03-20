@@ -113,6 +113,13 @@ export default function Home() {
         gradient: "from-blue-400 to-blue-600",
       }
     },
+    { 
+      value: 'space_exploration' as Category, 
+      label: 'Space Exploration',
+      theme: {
+        gradient: "from-indigo-500 to-purple-700",
+      }
+    },
   ];
 
   // Handle category selection - only fetch here, not in the useEffect

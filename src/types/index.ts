@@ -8,7 +8,8 @@ export type Category =
   | 'entertainment'
   | 'sports'
   | 'finance'
-  | 'education';
+  | 'education'
+  | 'space_exploration';
 
 export type PopularityLevel = 'low' | 'medium' | 'high' | 'very high';
 
