@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { CategoryGrid } from '@/components/CategoryGrid';
 import { TrendingTopicsList } from '@/components/TrendingTopicsList';
 import { ScriptDisplay } from '@/components/ScriptDisplay';
@@ -13,6 +13,79 @@ import { Header } from '@/components/Header';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 
+/**
+ * Custom hook to enforce a minimum duration for a loading state
+ * This ensures the UI shows a loading indicator for at least the specified time
+ */
+function useMinimumLoadingTime(
+  state: 'idle' | 'loading' | 'success' | 'error',
+  setState: React.Dispatch<React.SetStateAction<'idle' | 'loading' | 'success' | 'error'>>,
+  minimumTime: number = 2000
+) {
+  const loadingStartTimeRef = useRef<number | null>(null);
+  const loadingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  
+  // Clean up timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (loadingTimeoutRef.current) {
+        clearTimeout(loadingTimeoutRef.current);
+      }
+    };
+  }, []);
+  
+  // Force loading state to persist for minimum time
+  useEffect(() => {
+    if (state === 'loading') {
+      // Set loading start time if not already set
+      if (!loadingStartTimeRef.current) {
+        loadingStartTimeRef.current = Date.now();
+      }
+    } else if ((state === 'success' || state === 'error') && loadingStartTimeRef.current) {
+      // Calculate how long we've been in loading state
+      const loadingDuration = Date.now() - loadingStartTimeRef.current;
+      
+      if (loadingDuration < minimumTime) {
+        // If we haven't shown loading state for minimum time, revert back to loading
+        const remainingTime = minimumTime - loadingDuration;
+        
+        // Save the intended final state
+        const finalState = state;
+        
+        // Go back to loading state
+        setState('loading');
+        
+        // Schedule the real completion after remaining time
+        if (loadingTimeoutRef.current) {
+          clearTimeout(loadingTimeoutRef.current);
+        }
+        
+        loadingTimeoutRef.current = setTimeout(() => {
+          loadingStartTimeRef.current = null;
+          setState(finalState); // Set to the saved final state
+        }, remainingTime);
+      } else {
+        // Reset loading start time
+        loadingStartTimeRef.current = null;
+      }
+    }
+  }, [state, setState, minimumTime]);
+  
+  // Reset function to clear any pending timeouts and loading time tracking
+  const resetLoadingTimer = useCallback(() => {
+    loadingStartTimeRef.current = null;
+    if (loadingTimeoutRef.current) {
+      clearTimeout(loadingTimeoutRef.current);
+      loadingTimeoutRef.current = null;
+    }
+  }, []);
+  
+  return {
+    isEnforcingMinimumTime: loadingStartTimeRef.current !== null,
+    resetLoadingTimer
+  };
+}
+
 export default function Home() {
   // State management
   const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
@@ -22,16 +95,31 @@ export default function Home() {
   const [isTransitioning, setIsTransitioning] = useState<boolean>(false);
   const [scriptGenerationState, setScriptGenerationState] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
   
+  // Use the custom hook for minimum loading time
+  const { isEnforcingMinimumTime, resetLoadingTimer } = useMinimumLoadingTime(
+    scriptGenerationState,
+    setScriptGenerationState,
+    3000 // 3 seconds minimum loading time
+  );
+  
   // Custom hooks
   const { topics, isLoading, error: topicsError, fetchTrendingTopics } = useTrendingTopics();
   const { script, isGenerating, error: scriptError, generateScript } = useScriptGeneration();
 
   // Effect to handle script generation completion
   useEffect(() => {
-    if (script && scriptGenerationState === 'loading') {
+    // Only update loading -> success if there's no active loading timer
+    if (script && scriptGenerationState === 'loading' && !isEnforcingMinimumTime) {
       setScriptGenerationState('success');
     }
-  }, [script, scriptGenerationState]);
+  }, [script, scriptGenerationState, isEnforcingMinimumTime]);
+
+  // Add a debug effect to track state changes (keeping just the essential debugging)
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      (window as any).__scriptState = scriptGenerationState;
+    }
+  }, [scriptGenerationState]);
 
   // Get category theme information
   const getCategoryTheme = (category: Category | null) => {
@@ -146,12 +234,16 @@ export default function Home() {
 
   // Handle topic selection and script generation
   const handleTopicSelect = useCallback(async (topic: TrendingTopic) => {
+    // Now set the new topic
     setSelectedTopic(topic);
     
     if (!selectedCategory) return;
     
+    // Start loading
+    setScriptGenerationState('loading');
+
     try {
-      setScriptGenerationState('loading');
+      // Make the API call
       const scriptData = await generateScript(topic.title, selectedCategory, topic.description);
       
       if (scriptData) {
@@ -164,7 +256,7 @@ export default function Home() {
       setScriptGenerationState('error');
       toast.error('Failed to generate script');
     }
-  }, [selectedCategory, generateScript]);
+  }, [selectedCategory, generateScript, resetLoadingTimer]);
 
   // Helper function to get trending topics array safely
   const getTrendingTopics = () => {
@@ -354,9 +446,11 @@ export default function Home() {
               <AnimatePresence mode="wait">
                 {scriptGenerationState === 'loading' && (
                   <motion.div 
+                    key="script-loading-overlay"
                     initial={{ opacity: 0, scale: 0.9 }}
                     animate={{ opacity: 1, scale: 1 }}
                     exit={{ opacity: 0, scale: 0.9 }}
+                    transition={{ duration: 0.3 }}
                     className="fixed inset-0 z-[100] flex items-center justify-center"
                   >
                     <div className="absolute inset-0 bg-background/80 backdrop-blur-sm" />

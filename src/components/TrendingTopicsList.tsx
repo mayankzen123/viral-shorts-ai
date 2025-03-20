@@ -22,21 +22,23 @@ export function TrendingTopicsList({
   scriptGenerationState 
 }: TrendingTopicsListProps) {
   const [selectedTopicId, setSelectedTopicId] = useState<number | null>(null);
-
+  
   // Handle topic selection and immediately generate script
   const handleTopicClick = (topic: TrendingTopic, index: number) => {
-    if (isGenerating) return; // Prevent selecting another topic while generating
+    // Always allow selecting a topic, even if another is generating
     setSelectedTopicId(index);
-    onTopicSelect(topic); // Immediately generate script when topic is clicked
+    
+    // Generate the script
+    onTopicSelect(topic);
   };
   
   // Reset selectedTopicId when generation completes
   useEffect(() => {
     if (scriptGenerationState === 'success' || scriptGenerationState === 'error') {
-      // Reset selection after a short delay to show completion
+      // Only reset after a delay to show completion status
       const timer = setTimeout(() => {
         setSelectedTopicId(null);
-      }, 1000);
+      }, 2000); // Longer delay to ensure the user sees the status
       
       return () => clearTimeout(timer);
     }
@@ -149,7 +151,19 @@ export function TrendingTopicsList({
               role="button"
               tabIndex={0}
             >
-              <div className="p-4 cursor-pointer">
+              {/* Add pulsing highlight effect when this topic is loading */}
+              {selectedTopicId === index && scriptGenerationState === 'loading' && (
+                <div className="absolute inset-0 bg-primary/10 animate-pulse rounded-md pointer-events-none z-0"></div>
+              )}
+              
+              {/* Active indicator bar - make it more prominent during loading */}
+              {selectedTopicId === index && (
+                <div className={`absolute left-0 top-0 bottom-0 w-1 ${
+                  scriptGenerationState === 'loading' ? 'bg-primary animate-pulse w-1.5' : 'bg-primary'
+                }`}></div>
+              )}
+              
+              <div className="p-4 cursor-pointer relative z-10">
                 <div className="flex items-center justify-between mb-1.5">
                   <h3 className={`font-medium text-base ${selectedTopicId === index ? 'text-primary' : ''}`}>
                     {topic.title}
@@ -189,7 +203,7 @@ export function TrendingTopicsList({
                   {selectedTopicId === index && (
                     <div className={`
                       text-xs font-medium rounded-full px-2 py-0.5 flex items-center
-                      ${scriptGenerationState === 'loading' ? 'bg-primary/20 text-primary' : 
+                      ${scriptGenerationState === 'loading' ? 'bg-primary/20 text-primary animate-pulse border border-primary/50' : 
                         scriptGenerationState === 'success' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' : 
                         scriptGenerationState === 'error' ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' : 'bg-muted text-muted-foreground'}
                     `}>
@@ -231,11 +245,6 @@ export function TrendingTopicsList({
                   )}
                 </div>
               </div>
-              
-              {/* Active indicator bar */}
-              {selectedTopicId === index && (
-                <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary"></div>
-              )}
             </motion.div>
           ))}
         </div>
