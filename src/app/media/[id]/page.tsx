@@ -28,8 +28,8 @@ interface VideoState {
   url: string | null;
   isLoading: boolean;
   error: string | null;
-  isVideoPlayer?: boolean;
-  videoPlayerData?: {
+  isSlideshow?: boolean;
+  slideshowData?: {
     images: string[];
     audio: string;
   };
@@ -333,14 +333,27 @@ export default function MediaPage() {
           toast.error("The audio format may not be fully compatible with your browser");
         });
         
+        // Adjust video duration based on audio length if possible
+        let videoDuration = data.videoUrl.duration || 5000;
+        if (audioRef.current && audioRef.current.duration) {
+          const audioDuration = audioRef.current.duration * 1000; // convert to ms
+          const videoCount = data.videoUrl.images.length;
+          const calculatedDuration = audioDuration / videoCount;
+          
+          // Only use calculated duration if it's longer
+          if (calculatedDuration > videoDuration) {
+            videoDuration = calculatedDuration;
+          }
+        }
+        
         setVideoState({
           url: null,
           isLoading: false,
           error: null,
-          isVideoPlayer: true,
-          videoPlayerData: {
+          isSlideshow: true,
+          slideshowData: {
             images: data.videoUrl.images,
-            audio: videoAudio
+            audio: videoAudio,
           }
         });
       } else {
@@ -349,7 +362,7 @@ export default function MediaPage() {
           url: data.videoUrl,
           isLoading: false,
           error: null,
-          isVideoPlayer: false
+          isSlideshow: false
         });
       }
       
@@ -1014,7 +1027,7 @@ export default function MediaPage() {
               <Button
                 onClick={generateVideo}
                 disabled={videoState.isLoading || !checkAllMediaGenerated()}
-                variant={videoState.isVideoPlayer || videoState.url ? "outline" : "default"}
+                variant={videoState.isSlideshow || videoState.url ? "outline" : "default"}
                 className="flex items-center"
               >
                 {videoState.isLoading ? (
@@ -1022,7 +1035,7 @@ export default function MediaPage() {
                     <div className="size-4 border-2 border-white/30 border-t-white rounded-full animate-spin mr-2"></div>
                     Creating Video...
                   </>
-                ) : videoState.isVideoPlayer || videoState.url ? (
+                ) : videoState.isSlideshow || videoState.url ? (
                   <>
                     <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                       <path d="M13 10V3L4 14h7v7l9-11h-7z"></path>
@@ -1042,11 +1055,11 @@ export default function MediaPage() {
             </div>
             
             <div className="p-6">
-              {videoState.isVideoPlayer && videoState.videoPlayerData ? (
+              {videoState.isSlideshow && videoState.slideshowData ? (
                 <div className="space-y-4">
                   <div className="bg-muted/30 rounded-lg overflow-hidden">
                     <VideoPlayer
-                      data={videoState.videoPlayerData}
+                      data={videoState.slideshowData}
                       className="w-full"
                     />
                   </div>
@@ -1112,8 +1125,7 @@ export default function MediaPage() {
                       </svg>
                       <div>
                         <p className="text-xs text-muted-foreground">
-                          Your video is ready! You can download it to your device or share it on social media platforms.
-                          The video combines your script's visuals with professional AI narration.
+                          Your video is ready! You can use the controls to navigate through the images while listening to the narration.
                         </p>
                       </div>
                     </div>
