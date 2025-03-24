@@ -43,7 +43,6 @@ export async function POST(request: Request) {
     
     return NextResponse.json(script);
   } catch (error) {
-    console.error('Error in script generation API:', error);
     return NextResponse.json(
       { error: 'Failed to generate script' }, 
       { status: 500 }
@@ -114,7 +113,6 @@ async function generateScriptWithAI(topic: string, category: string, description
     
     return script;
   } catch (parseError) {
-    console.error('Error parsing OpenAI response:', parseError);
     throw new Error('Invalid script format received');
   }
 }

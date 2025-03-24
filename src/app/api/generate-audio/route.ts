@@ -30,7 +30,6 @@ export async function POST(request: Request) {
     
     if (cachedAudioUrl) {
       // Return cached audio URL if it exists
-      console.log('Using cached audio for text:', text.substring(0, 30) + '...');
       return NextResponse.json({ audioUrl: cachedAudioUrl });
     }
 
@@ -54,8 +53,6 @@ export async function POST(request: Request) {
     // Return the audio URL
     return NextResponse.json({ audioUrl });
   } catch (error: any) {
-    console.error('Error generating audio:', error);
-    
     return NextResponse.json(
       { error: error.message || 'Failed to generate audio' },
       { status: 500 }

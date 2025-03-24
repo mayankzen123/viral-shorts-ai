@@ -31,7 +31,6 @@ export async function POST(request: Request) {
     
     if (cachedImageUrl) {
       // Return cached image URL if it exists
-      console.log('Using cached image for prompt:', prompt);
       return NextResponse.json({ imageUrl: cachedImageUrl });
     }
 
@@ -58,8 +57,6 @@ export async function POST(request: Request) {
     // Return the image URL
     return NextResponse.json({ imageUrl });
   } catch (error: any) {
-    console.error('Error generating image:', error);
-    
     return NextResponse.json(
       { error: error.message || 'Failed to generate image' },
       { status: 500 }

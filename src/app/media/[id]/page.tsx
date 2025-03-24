@@ -8,7 +8,7 @@ import { toast } from 'sonner';
 import { motion } from 'framer-motion';
 import { Header } from '@/components/Header';
 import { Toaster } from '@/components/ui/sonner';
-import { VideoPlayer } from '@/components/VideoPlayer';
+import { RemotionPlayer } from '@/components/RemotionPlayer';
 
 interface ImageState {
   [key: number]: {
@@ -71,7 +71,6 @@ export default function MediaPage() {
         toast.error('No script selected. Please select a script first.');
       }
     } catch (error) {
-      console.error('Error loading script:', error);
       toast.error('Failed to load script data');
     } finally {
       setIsLoading(false);
@@ -117,7 +116,6 @@ export default function MediaPage() {
         [index]: { url: data.imageUrl, isLoading: false, error: null }
       }));
     } catch (error: any) {
-      console.error(`Error generating image for suggestion ${index}:`, error);
       toast.error(`Failed to generate image: ${error.message}`);
       
       // Update state with error
@@ -202,7 +200,6 @@ export default function MediaPage() {
           if (audioRef.current && audioRef.current.readyState >= 2) {
             audioRef.current.play()
               .catch(err => {
-                console.warn('Error auto-playing audio:', err);
                 // User may need to interact with the page first due to browser autoplay policies
               });
           }
@@ -223,7 +220,6 @@ export default function MediaPage() {
       
       toast.success("Audio narration generated successfully!");
     } catch (error: any) {
-      console.error('Error generating audio:', error);
       toast.error(`Failed to generate audio: ${error.message}`);
       
       // Update state with error
@@ -258,8 +254,11 @@ export default function MediaPage() {
     });
     
     try {
-      // Collect all image URLs
-      const imageUrls = script.suggestedVisuals.map((_, index) => imageState[index]?.url).filter(Boolean) as string[];
+      // Collect all image URLs - ensure all URLs are valid
+      const imageUrls = script.suggestedVisuals
+        .map((_, index) => imageState[index]?.url)
+        .filter((url): url is string => Boolean(url)) as string[];
+      
       const uniqueId = topic?.title ? `${topic.title}-video` : 'script-video';
       
       // Ensure the audio URL is correctly formatted for the audio element
@@ -283,8 +282,6 @@ export default function MediaPage() {
           processedAudioUrl = `${processedAudioUrl}${processedAudioUrl.includes('?') ? '&' : '?'}type=audio/mpeg`;
         }
       }
-      
-      console.log("Using processed audio URL:", processedAudioUrl);
       
       const response = await fetch('/api/generate-video', {
         method: 'POST',
@@ -324,28 +321,20 @@ export default function MediaPage() {
           }
         }
         
+        // Ensure we have at least one image
+        if (!data.videoUrl.images || data.videoUrl.images.length === 0) {
+          throw new Error('No images received from the API for the video');
+        }
+        
         // Create a test Audio element to verify the audio can be loaded
         const testAudio = new Audio();
         testAudio.src = videoAudio;
         // Listen for errors in loading audio
         testAudio.addEventListener('error', (e) => {
-          console.error("Audio format validation error:", testAudio.error);
           toast.error("The audio format may not be fully compatible with your browser");
         });
         
-        // Adjust video duration based on audio length if possible
-        let videoDuration = data.videoUrl.duration || 5000;
-        if (audioRef.current && audioRef.current.duration) {
-          const audioDuration = audioRef.current.duration * 1000; // convert to ms
-          const videoCount = data.videoUrl.images.length;
-          const calculatedDuration = audioDuration / videoCount;
-          
-          // Only use calculated duration if it's longer
-          if (calculatedDuration > videoDuration) {
-            videoDuration = calculatedDuration;
-          }
-        }
-        
+        // Set the video state with all the images and the audio
         setVideoState({
           url: null,
           isLoading: false,
@@ -368,7 +357,6 @@ export default function MediaPage() {
       
       toast.success("Video created successfully!");
     } catch (error: any) {
-      console.error('Error generating video:', error);
       toast.error(`Failed to generate video: ${error.message}`);
       
       // Update state with error
@@ -1058,7 +1046,7 @@ export default function MediaPage() {
               {videoState.isSlideshow && videoState.slideshowData ? (
                 <div className="space-y-4">
                   <div className="bg-muted/30 rounded-lg overflow-hidden">
-                    <VideoPlayer
+                    <RemotionPlayer
                       data={videoState.slideshowData}
                       className="w-full"
                     />

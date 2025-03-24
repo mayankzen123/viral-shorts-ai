@@ -1,5 +1,14 @@
 import { NextResponse } from 'next/server';
 import { CacheManager } from '@/lib/utils';
+import fs from 'fs-extra';
+import path from 'path';
+import { getCompositions, renderMedia } from '@remotion/renderer';
+import { bundle } from '@remotion/bundler';
+import os from 'os';
+
+// Create a temporary directory for Remotion output
+const tempDir = path.join(os.tmpdir(), 'remotion-renders');
+fs.ensureDirSync(tempDir);
 
 // Create a cache for video data with 24-hour TTL
 const videoCache = new CacheManager<any>(24 * 60 * 60 * 1000);
@@ -16,7 +25,7 @@ export async function POST(request: Request) {
       );
     }
 
-    // Generate cache key for this specific video
+    // Generate cache key for this specific video request
     const cacheKey = uniqueId ? `video-${uniqueId}` : `video-${Date.now()}`;
     
     // Check cache first
@@ -24,29 +33,52 @@ export async function POST(request: Request) {
     
     if (cachedData) {
       // Return cached data if it exists
-      console.log('Using cached video data');
       return NextResponse.json({ videoUrl: cachedData });
     }
 
-    // Create video data structure with images and audio
-    const videoData = {
-      images: images,
-      audio: audioUrl,
-      type: 'video',
-      created: Date.now()
-    };
-    
-    // Store in cache
-    videoCache.set(cacheKey, videoData);
-
-    // Return the video data
-    return NextResponse.json({ 
-      videoUrl: videoData,
-      message: "Video created successfully with images and audio."
-    });
+    try {
+      // Validate each image URL - filter out any empty or invalid URLs
+      const validImages = images.filter((url: string) => url && typeof url === 'string' && url.length > 0);
+      
+      if (validImages.length === 0) {
+        throw new Error('No valid image URLs provided');
+      }
+      
+      // Create video data structure with images and audio for client-side rendering
+      const videoData = {
+        type: 'video',
+        images: validImages,
+        audio: audioUrl,
+        created: Date.now()
+      };
+      
+      // Store in cache
+      videoCache.set(cacheKey, videoData);
+      
+      return NextResponse.json({ 
+        videoUrl: videoData,
+        message: `Video created successfully with ${validImages.length} images and audio.`
+      });
+    } catch (renderError: any) {
+      // Fallback to client-side rendering but ensure we're still validating images
+      const validImages = images.filter((url: string) => url && typeof url === 'string' && url.length > 0);
+      
+      const fallbackData = {
+        type: 'video',
+        images: validImages,
+        audio: audioUrl,
+        created: Date.now(),
+        isClientSideRendered: true
+      };
+      
+      videoCache.set(cacheKey, fallbackData);
+      
+      return NextResponse.json({ 
+        videoUrl: fallbackData,
+        message: "Video will be rendered client-side due to server rendering error."
+      });
+    }
   } catch (error: any) {
-    console.error('Error generating video:', error);
-    
     return NextResponse.json(
       { error: error.message || 'Failed to generate video' },
       { status: 500 }

@@ -45,7 +45,6 @@ export function Slideshow({ data, onComplete, className }: SlideshowProps) {
       // This ensures slides don't change too quickly
       if (calculatedDuration > slideDuration.current) {
         slideDuration.current = calculatedDuration;
-        console.log(`Adjusted slide duration to ${slideDuration.current}ms based on audio length`);
       }
     }
   }, [audioLoaded, audioDuration, data.images.length]);
@@ -98,7 +97,6 @@ export function Slideshow({ data, onComplete, className }: SlideshowProps) {
           }
         })
         .catch(err => {
-          console.log("Play was already interrupted, ignoring:", err);
         });
     } else if (audioRef.current) {
       // No active play promise, safe to pause
@@ -131,7 +129,6 @@ export function Slideshow({ data, onComplete, className }: SlideshowProps) {
     const handleEnded = () => {
       // If the audio ends before all slides are shown, we'll continue showing the slides
       // but we'll mark that the audio has ended
-      console.log("Audio playback ended");
       
       // Don't stop the slideshow if there are more slides to show
       if (currentSlide < data.images.length - 1) {
@@ -139,7 +136,7 @@ export function Slideshow({ data, onComplete, className }: SlideshowProps) {
         if (audioRef.current) {
           // We could loop the audio if desired
           // audioRef.current.currentTime = 0;
-          // audioRef.current.play().catch(err => console.error("Error replaying audio:", err));
+          // Could replay audio if desired
         }
       } else {
         // We're at the last slide and audio ended, complete the slideshow
@@ -149,7 +146,6 @@ export function Slideshow({ data, onComplete, className }: SlideshowProps) {
     
     const handleError = (e: Event) => {
       const audioElement = e.target as HTMLAudioElement;
-      console.error('Audio error:', audioElement.error);
       setErrorMessage(audioElement.error?.message || "Failed to play audio");
     };
     
@@ -192,7 +188,6 @@ export function Slideshow({ data, onComplete, className }: SlideshowProps) {
           playPromiseRef.current = audioRef.current.play();
           
           playPromiseRef.current.catch(error => {
-            console.error('Error playing audio:', error);
             // User interaction may be required for autoplay
             if (error.name === 'NotAllowedError') {
               setErrorMessage("Please interact with the page first to enable audio playback");
@@ -277,7 +272,6 @@ export function Slideshow({ data, onComplete, className }: SlideshowProps) {
               if (audioRef.current) audioRef.current.pause();
             })
             .catch(err => {
-              console.error("Error while trying to pause:", err);
             });
         } else {
           audioRef.current.pause();
