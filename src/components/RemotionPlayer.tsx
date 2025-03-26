@@ -1,8 +1,6 @@
 'use client';
 
 import React, { useEffect, useRef, useState } from 'react';
-import { Player, PlayerRef } from '@remotion/player';
-import { SlideshowVideo } from '@/remotion/compositions/SlideshowVideo';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
@@ -15,12 +13,18 @@ interface RemotionPlayerProps {
   className?: string;
 }
 
+/**
+ * Simplified RemotionPlayer component that doesn't require @remotion/player 
+ * This is a temporary solution until Node.js can be upgraded to install Remotion
+ */
 export function RemotionPlayer({ data, onComplete, className }: RemotionPlayerProps) {
   const [isPlaying, setIsPlaying] = useState(false);
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [audioDuration, setAudioDuration] = useState(0);
-  const playerRef = useRef<PlayerRef>(null);
+  const audioRef = useRef<HTMLAudioElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   
-  // Calculate audio duration to determine video length
+  // Calculate audio duration to determine slideshow pacing
   useEffect(() => {
     if (!data.audio) return;
     
@@ -44,128 +48,131 @@ export function RemotionPlayer({ data, onComplete, className }: RemotionPlayerPr
     };
   }, [data.audio]);
   
-  // Validate that we have images
+  // Handle image transitions
   useEffect(() => {
-    // Validate images silently
-  }, [data.images]);
+    if (!isPlaying || !data.images.length) return;
+    
+    const slideDuration = audioDuration / data.images.length;
+    const intervalTime = slideDuration * 1000;
+    
+    const interval = setInterval(() => {
+      setCurrentImageIndex((prevIndex) => {
+        const nextIndex = prevIndex + 1;
+        if (nextIndex >= data.images.length) {
+          // End of slideshow
+          clearInterval(interval);
+          setIsPlaying(false);
+          if (onComplete) onComplete();
+          return prevIndex;
+        }
+        return nextIndex;
+      });
+    }, intervalTime);
+    
+    return () => {
+      clearInterval(interval);
+    };
+  }, [isPlaying, data.images, audioDuration, onComplete]);
   
-  // Set up event listeners for player state changes
+  // Handle audio controls
   useEffect(() => {
-    const player = playerRef.current;
-    if (!player) return;
+    const audio = audioRef.current;
+    if (!audio) return;
     
-    const handlePlay = () => {
-      setIsPlaying(true);
-    };
-    
-    const handlePause = () => {
-      setIsPlaying(false);
-    };
+    if (isPlaying) {
+      audio.play().catch(error => {
+        console.error("Audio play error:", error);
+        setIsPlaying(false);
+      });
+    } else {
+      audio.pause();
+    }
     
     const handleEnded = () => {
       setIsPlaying(false);
+      setCurrentImageIndex(0);
       if (onComplete) onComplete();
     };
     
-    player.addEventListener('play', handlePlay);
-    player.addEventListener('pause', handlePause);
-    player.addEventListener('ended', handleEnded);
+    audio.addEventListener('ended', handleEnded);
     
     return () => {
-      player.removeEventListener('play', handlePlay);
-      player.removeEventListener('pause', handlePause);
-      player.removeEventListener('ended', handleEnded);
+      audio.pause();
+      audio.removeEventListener('ended', handleEnded);
     };
-  }, [onComplete]);
+  }, [isPlaying, onComplete]);
   
   // Only render if we have at least one image
   if (!data.images.length) {
     return <div className="text-center p-4">No images available for video</div>;
   }
   
-  // Calculate video duration in frames (30fps) - ensure a minimum duration
-  // Make sure it's at least 2 seconds per image (60 frames at 30fps)
-  const minFramesPerImage = 60; // 2 seconds per image at 30fps
-  const framesFromAudio = Math.ceil(audioDuration * 30);
-  const framesFromImages = data.images.length * minFramesPerImage;
-  const durationInFrames = Math.max(300, framesFromAudio, framesFromImages);
-  
   const togglePlayback = () => {
-    const player = playerRef.current;
-    if (!player) return;
-    
-    if (isPlaying) {
-      player.pause();
-    } else {
-      player.play();
-    }
+    setIsPlaying(!isPlaying);
   };
   
   const restartVideo = () => {
-    const player = playerRef.current;
-    if (!player) return;
+    setCurrentImageIndex(0);
     
-    player.seekTo(0);
-    setTimeout(() => {
-      player.play();
-    }, 100);
+    const audio = audioRef.current;
+    if (audio) {
+      audio.currentTime = 0;
+    }
+    
+    setIsPlaying(true);
   };
   
   return (
     <div className={cn("relative overflow-hidden rounded-lg", className)}>
-      {/* Remotion Player */}
+      {/* Slide show display */}
       <div 
+        ref={containerRef}
         className="aspect-video bg-black cursor-pointer relative" 
+        onClick={togglePlayback}
       >
-        {/* Click capture layer that doesn't cover controls */}
-        <div 
-          className="absolute inset-0 z-10 flex items-center justify-center group pointer-events-none"
-        >
-          {/* Center play area - allow clicks only in the center area */}
-          <div 
-            className="w-3/4 h-3/4 flex items-center justify-center pointer-events-auto"
-            onClick={togglePlayback}
-            aria-label={isPlaying ? "Pause video" : "Play video"}
-          >
-            {/* Play/Pause Icon Overlay - visible on hover */}
-            <div className="w-16 h-16 bg-black/50 rounded-full flex items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-opacity">
-              {isPlaying ? (
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-8 h-8">
-                  <path fillRule="evenodd" d="M6.75 5.25a.75.75 0 01.75-.75H9a.75.75 0 01.75.75v13.5a.75.75 0 01-.75.75H7.5a.75.75 0 01-.75-.75V5.25zm7.5 0A.75.75 0 0115 4.5h1.5a.75.75 0 01.75.75v13.5a.75.75 0 01-.75.75H15a.75.75 0 01-.75-.75V5.25z" clipRule="evenodd" />
-                </svg>
-              ) : (
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-8 h-8">
-                  <path fillRule="evenodd" d="M4.5 5.653c0-1.426 1.529-2.33 2.779-1.643l11.54 6.348c1.295.712 1.295 2.573 0 3.285L7.28 19.991c-1.25.687-2.779-.217-2.779-1.643V5.653z" clipRule="evenodd" />
-                </svg>
+        {/* Audio element */}
+        <audio 
+          ref={audioRef} 
+          src={data.audio}
+          style={{ display: 'none' }}
+        />
+        
+        {/* Images */}
+        <div className="absolute inset-0 flex items-center justify-center">
+          {data.images.map((image, index) => (
+            <div
+              key={index}
+              className={cn(
+                "absolute inset-0 transition-opacity duration-1000",
+                currentImageIndex === index ? "opacity-100" : "opacity-0"
               )}
+            >
+              <img
+                src={image}
+                alt={`Slide ${index + 1}`}
+                className="w-full h-full object-contain"
+              />
             </div>
-          </div>
+          ))}
         </div>
         
-        <Player
-          ref={playerRef}
-          component={SlideshowVideo}
-          durationInFrames={durationInFrames}
-          compositionWidth={1920}
-          compositionHeight={1080}
-          fps={30}
-          controls
-          autoPlay={false}
-          loop={false}
-          clickToPlay={false}
-          style={{
-            width: '100%',
-            height: '100%',
-          }}
-          inputProps={{
-            images: data.images,
-            audio: data.audio,
-            durationInFrames,
-          }}
-          showVolumeControls
-        />
+        {/* Play/Pause Overlay */}
+        <div className="absolute inset-0 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
+          <div className="w-16 h-16 bg-black/50 rounded-full flex items-center justify-center text-white">
+            {isPlaying ? (
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-8 h-8">
+                <path fillRule="evenodd" d="M6.75 5.25a.75.75 0 01.75-.75H9a.75.75 0 01.75.75v13.5a.75.75 0 01-.75.75H7.5a.75.75 0 01-.75-.75V5.25zm7.5 0A.75.75 0 0115 4.5h1.5a.75.75 0 01.75.75v13.5a.75.75 0 01-.75.75H15a.75.75 0 01-.75-.75V5.25z" clipRule="evenodd" />
+              </svg>
+            ) : (
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-8 h-8">
+                <path fillRule="evenodd" d="M4.5 5.653c0-1.426 1.529-2.33 2.779-1.643l11.54 6.348c1.295.712 1.295 2.573 0 3.285L7.28 19.991c-1.25.687-2.779-.217-2.779-1.643V5.653z" clipRule="evenodd" />
+              </svg>
+            )}
+          </div>
+        </div>
       </div>
       
+      {/* Controls */}
       <div className="p-3 bg-muted/30 space-y-2">
         <div className="flex justify-between items-center">
           <Button

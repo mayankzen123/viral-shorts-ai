@@ -14,11 +14,13 @@ export type Category =
 export type PopularityLevel = 'low' | 'medium' | 'high' | 'very high';
 
 export interface TrendingTopic {
+  id?: string;
   title: string;
   description: string;
   viralScore: number;
   dateStarted: string;
   estimatedPopularity: PopularityLevel | string;
+  category?: Category;
 }
 
 export interface TrendingTopicsResponse {

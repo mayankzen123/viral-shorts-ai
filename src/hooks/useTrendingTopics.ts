@@ -33,13 +33,27 @@ export function useTrendingTopics() {
       
       const data = await response.json();
       
+      // Validate data structure but only use real data
+      if (!data.trendingTopics || !Array.isArray(data.trendingTopics)) {
+        console.warn("API returned invalid trending topics structure");
+        // Return empty structure but maintain expected format
+        const emptyResponse = { trendingTopics: [] };
+        setTopics(emptyResponse);
+        setIsLoading(false);
+        return emptyResponse;
+      }
+      
       setTopics(data);
       setIsLoading(false);
       return data;
     } catch (err) {
+      console.error("Error fetching trending topics:", err);
+      // Return empty structure instead of mock data
+      const emptyResponse = { trendingTopics: [] };
+      setTopics(emptyResponse);
       setError(err instanceof Error ? err.message : 'An unknown error occurred');
       setIsLoading(false);
-      return null;
+      return emptyResponse;
     }
   }, [isLoading]); // Only re-create the function when isLoading changes
 

@@ -2,49 +2,121 @@
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { TrendingTopic, Category } from '@/types';
+import { TrendingTopic, Category, TrendingTopicsResponse } from '@/types';
 import { motion } from 'framer-motion';
 import { useState, useEffect } from 'react';
 
-interface TrendingTopicsListProps {
-  topics: TrendingTopic[];
-  category: Category | null;
-  onTopicSelect: (topic: TrendingTopic) => void;
-  isGenerating: boolean;
-  scriptGenerationState: 'idle' | 'loading' | 'success' | 'error';
+export interface TrendingTopicsListProps {
+  topics: TrendingTopicsResponse | null;
+  isLoading: boolean;
+  onTopicSelect: (topic: TrendingTopic, index: number) => void;
+  selectedCategory: Category | null;
+  error: string | null;
+  isGenerating?: boolean;
+  generatingTopicId?: string | number | null;
 }
 
 export function TrendingTopicsList({ 
   topics, 
-  category, 
+  isLoading,
   onTopicSelect, 
-  isGenerating, 
-  scriptGenerationState 
+  selectedCategory,
+  error,
+  isGenerating = false,
+  generatingTopicId = null
 }: TrendingTopicsListProps) {
   const [selectedTopicId, setSelectedTopicId] = useState<number | null>(null);
   
-  // Handle topic selection and immediately generate script
-  const handleTopicClick = (topic: TrendingTopic, index: number) => {
-    // Always allow selecting a topic, even if another is generating
-    setSelectedTopicId(index);
+  // Extract trending topics from response
+  const getTrendingTopics = (): TrendingTopic[] => {
+    if (!topics) return [];
     
-    // Generate the script
-    onTopicSelect(topic);
+    // Handle the trendingTopics structure from the OpenAI API
+    if (topics.trendingTopics && Array.isArray(topics.trendingTopics)) {
+      return topics.trendingTopics;
+    }
+    
+    // Fallback to topics property if it exists
+    if (topics.topics && Array.isArray(topics.topics)) {
+      return topics.topics;
+    }
+    
+    return [];
   };
   
-  // Reset selectedTopicId when generation completes
-  useEffect(() => {
-    if (scriptGenerationState === 'success' || scriptGenerationState === 'error') {
-      // Only reset after a delay to show completion status
-      const timer = setTimeout(() => {
-        setSelectedTopicId(null);
-      }, 2000); // Longer delay to ensure the user sees the status
-      
-      return () => clearTimeout(timer);
-    }
-  }, [scriptGenerationState]);
+  const trendingTopics = getTrendingTopics();
+  
+  // Handle topic selection
+  const handleTopicClick = (topic: TrendingTopic, index: number) => {
+    setSelectedTopicId(index);
+    onTopicSelect(topic, index);
+  };
 
-  if (!topics || !topics.length) {
+  // Display loading state
+  if (isLoading) {
+    return (
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.5 }}
+        className="space-y-6"
+      >
+        <div className="grid grid-cols-1 gap-4">
+          {Array.from({ length: 5 }).map((_, i) => (
+            <div key={i} className="bg-card/50 text-card-foreground rounded-lg overflow-hidden border p-4 animate-pulse">
+              <div className="h-6 bg-muted rounded w-3/4 mb-3"></div>
+              <div className="h-4 bg-muted rounded w-full mb-2"></div>
+              <div className="h-4 bg-muted rounded w-5/6"></div>
+              <div className="flex justify-between mt-4">
+                <div className="h-3 bg-muted rounded w-20"></div>
+                <div className="h-3 bg-muted rounded w-24"></div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </motion.div>
+    );
+  }
+
+  // Display error state
+  if (error) {
+    return (
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.5 }}
+      >
+        <Card className="border-destructive/20 bg-destructive/5">
+          <CardContent className="pt-6">
+            <div className="flex flex-col items-center text-center">
+              <svg 
+                xmlns="http://www.w3.org/2000/svg" 
+                className="h-8 w-8 text-destructive mb-2" 
+                viewBox="0 0 24 24" 
+                fill="none" 
+                stroke="currentColor" 
+                strokeWidth="2" 
+                strokeLinecap="round" 
+                strokeLinejoin="round"
+              >
+                <circle cx="12" cy="12" r="10" />
+                <line x1="12" x2="12" y1="8" y2="12" />
+                <line x1="12" x2="12.01" y1="16" y2="16" />
+              </svg>
+              <h3 className="text-lg font-medium text-destructive mb-1">Error Loading Topics</h3>
+              <p className="text-sm text-muted-foreground mb-4">{error}</p>
+              <Button variant="outline" size="sm" onClick={() => window.location.reload()}>
+                Try Again
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </motion.div>
+    );
+  }
+
+  // Display empty state
+  if (!trendingTopics.length) {
     return (
       <motion.div
         initial={{ opacity: 0 }}
@@ -96,8 +168,8 @@ export function TrendingTopicsList({
   };
 
   const getCategoryName = () => {
-    if (!category) return 'Selected Category';
-    return category.charAt(0).toUpperCase() + category.slice(1);
+    if (!selectedCategory) return 'Selected Category';
+    return selectedCategory.charAt(0).toUpperCase() + selectedCategory.slice(1).replace('_', ' ');
   };
 
   return (
@@ -118,8 +190,8 @@ export function TrendingTopicsList({
               <ul className="text-xs text-muted-foreground space-y-1.5 pl-5 list-disc">
                 <li>Click any trending topic to generate a script</li>
                 <li>Each script is professionally crafted for viral potential</li>
-                <li>Copy any section or the entire script for your use</li>
                 <li>Higher viral scores indicate better performance potential</li>
+                <li>You'll be redirected to the media editor after generation</li>
               </ul>
             </div>
           </div>
@@ -135,7 +207,7 @@ export function TrendingTopicsList({
         </div>
         
         <div className="divide-y">
-          {topics.map((topic, index) => (
+          {trendingTopics.map((topic, index) => (
             <motion.div
               key={index}
               initial={{ opacity: 0 }}
@@ -144,23 +216,15 @@ export function TrendingTopicsList({
               className={`
                 group relative
                 ${selectedTopicId === index ? 'bg-primary/5' : 'hover:bg-muted/50'}
-                ${isGenerating && selectedTopicId !== index ? 'opacity-60' : ''}
                 transition-all duration-200
               `}
               onClick={() => handleTopicClick(topic, index)}
               role="button"
               tabIndex={0}
             >
-              {/* Add pulsing highlight effect when this topic is loading */}
-              {selectedTopicId === index && scriptGenerationState === 'loading' && (
-                <div className="absolute inset-0 bg-primary/10 animate-pulse rounded-md pointer-events-none z-0"></div>
-              )}
-              
-              {/* Active indicator bar - make it more prominent during loading */}
+              {/* Active indicator bar */}
               {selectedTopicId === index && (
-                <div className={`absolute left-0 top-0 bottom-0 w-1 ${
-                  scriptGenerationState === 'loading' ? 'bg-primary animate-pulse w-1.5' : 'bg-primary'
-                }`}></div>
+                <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary"></div>
               )}
               
               <div className="p-4 cursor-pointer relative z-10">
@@ -179,7 +243,9 @@ export function TrendingTopicsList({
                     </div>
                     
                     <div className={`h-4 px-2 rounded-full text-xs font-medium text-white flex items-center bg-gradient-to-r ${getPopularityColor(topic.estimatedPopularity)}`}>
-                      {topic.estimatedPopularity.charAt(0).toUpperCase() + topic.estimatedPopularity.slice(1)}
+                      {typeof topic.estimatedPopularity === 'string' ? 
+                        topic.estimatedPopularity.charAt(0).toUpperCase() + topic.estimatedPopularity.slice(1) :
+                        topic.estimatedPopularity}
                     </div>
                   </div>
                 </div>
@@ -200,45 +266,17 @@ export function TrendingTopicsList({
                   </div>
                   
                   {/* Generation status */}
-                  {selectedTopicId === index && (
-                    <div className={`
-                      text-xs font-medium rounded-full px-2 py-0.5 flex items-center
-                      ${scriptGenerationState === 'loading' ? 'bg-primary/20 text-primary animate-pulse border border-primary/50' : 
-                        scriptGenerationState === 'success' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' : 
-                        scriptGenerationState === 'error' ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' : 'bg-muted text-muted-foreground'}
-                    `}>
-                      {scriptGenerationState === 'loading' && (
-                        <>
-                          <svg className="animate-spin h-3 w-3 mr-1" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                          </svg>
-                          <span>Generating...</span>
-                        </>
-                      )}
-                      {scriptGenerationState === 'success' && (
-                        <>
-                          <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 mr-1" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                            <path d="M20 6 9 17l-5-5" />
-                          </svg>
-                          <span>Generated</span>
-                        </>
-                      )}
-                      {scriptGenerationState === 'error' && (
-                        <>
-                          <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 mr-1" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                            <circle cx="12" cy="12" r="10" />
-                            <line x1="12" x2="12" y1="8" y2="12" />
-                            <line x1="12" x2="12.01" y1="16" y2="16" />
-                          </svg>
-                          <span>Failed</span>
-                        </>
-                      )}
+                  {generatingTopicId === index && isGenerating ? (
+                    <div className="text-xs font-medium bg-primary/20 text-primary rounded-full px-2 py-0.5 flex items-center">
+                      <svg className="animate-spin h-3 w-3 mr-1" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                      </svg>
+                      <span>Generating Script...</span>
                     </div>
-                  )}
-                  
-                  {/* Action indicator for unselected items */}
-                  {selectedTopicId !== index && !isGenerating && (
+                  ) : selectedTopicId === index ? (
+                    <div className="text-xs font-medium text-primary">Selected</div>
+                  ) : (
                     <div className="text-xs text-primary font-medium opacity-0 group-hover:opacity-100 transition-opacity">
                       Click to generate script
                     </div>

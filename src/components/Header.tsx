@@ -1,14 +1,16 @@
 'use client';
 
+import Link from "next/link";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { motion } from "framer-motion";
+import { Button } from "@/components/ui/button";
 
 export function Header() {
   return (
     <header className="w-full relative z-10">
-      <div className="container px-4 py-8 md:px-6 lg:py-12 mx-auto">
+      <div className="container px-4 py-6 md:px-6 lg:py-8 mx-auto">
         <div className="flex flex-col items-center justify-between space-y-4 md:flex-row md:space-y-0">
-          <div className="flex flex-col items-center md:items-start space-y-2">
+          <Link href="/">
             <motion.div 
               initial={{ opacity: 0, y: -20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -31,21 +33,31 @@ export function Header() {
               </div>
               <h1 className="text-4xl font-bold gradient-text">ShortScript</h1>
             </motion.div>
-            <motion.p 
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ duration: 0.5, delay: 0.2 }}
-              className="text-xl text-muted-foreground text-center md:text-left"
-            >
-              Create viral short-form videos with AI
-            </motion.p>
-          </div>
-          <div className="flex items-center space-x-4">
-            <div className="flex items-center space-x-1">
-              <span className="text-xs bg-gradient-to-r from-amber-500 to-orange-600 text-white px-2 py-1 rounded-full font-medium">BETA</span>
+          </Link>
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.5, delay: 0.2 }}
+            className="flex items-center space-x-6"
+          >
+            <nav className="hidden md:flex items-center space-x-6">
+              <Button variant="ghost" asChild>
+                <Link href="#features">Features</Link>
+              </Button>
+              <Button variant="ghost" asChild>
+                <Link href="#trending">Trending</Link>
+              </Button>
+              <Button variant="ghost" asChild>
+                <Link href="#help">Help</Link>
+              </Button>
+            </nav>
+            <div className="flex items-center space-x-4">
+              <div className="flex items-center space-x-1">
+                <span className="text-xs bg-gradient-to-r from-amber-500 to-orange-600 text-white px-2 py-1 rounded-full font-medium">BETA</span>
+              </div>
+              <ThemeToggle />
             </div>
-            <ThemeToggle />
-          </div>
+          </motion.div>
         </div>
       </div>
     </header>

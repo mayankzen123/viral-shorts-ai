@@ -6,9 +6,10 @@ import { Button } from '@/components/ui/button';
 import { Script, TrendingTopic } from '@/types';
 import { toast } from 'sonner';
 import { motion } from 'framer-motion';
-import { Header } from '@/components/Header';
 import { Toaster } from '@/components/ui/sonner';
 import { RemotionPlayer } from '@/components/RemotionPlayer';
+import Link from 'next/link';
+import { ThemeToggle } from '@/components/ui/theme-toggle';
 
 interface ImageState {
   [key: number]: {
@@ -58,24 +59,64 @@ export default function MediaPage() {
   
   // Fetch the script and topic from localStorage on mount
   useEffect(() => {
+    if (!params || !params.id) {
+      router.push('/');
+      return;
+    }
+    
+    const projectId = params.id as string;
+    
     try {
-      const savedScript = localStorage.getItem('selectedScript');
-      const savedTopic = localStorage.getItem('selectedTopic');
+      // Get script and topic from localStorage based on project ID
+      const savedScript = localStorage.getItem(`media_${projectId}_script`);
+      const savedTopic = localStorage.getItem(`media_${projectId}_topic`);
       
-      if (savedScript && savedTopic) {
-        setScript(JSON.parse(savedScript));
-        setTopic(JSON.parse(savedTopic));
-      } else {
-        // If no script or topic, redirect back to home
+      if (!savedScript || !savedTopic) {
         router.push('/');
-        toast.error('No script selected. Please select a script first.');
+        toast.error('No script or topic data found. Please create a new script.');
+        return;
       }
+      
+      // Create script object from the raw script text
+      const scriptText = decodeURIComponent(savedScript);
+      const topicText = decodeURIComponent(savedTopic);
+      
+      // Parse script into sections (hook, main content, call to action)
+      const scriptParts = scriptText.split('\n\n').filter(part => part.trim() !== '');
+      
+      const scriptObject: Script = {
+        hook: scriptParts[0] || '',
+        mainContent: scriptParts[1] || '',
+        callToAction: scriptParts[2] || '',
+        suggestedVisuals: [
+          `Close-up of ${topicText} with dramatic lighting`,
+          `Person reacting to ${topicText} information`,
+          `Data visualization showing ${topicText} trends`,
+          `Comparison between ${topicText} and similar concepts`,
+          `Real-world application of ${topicText}`
+        ]
+      };
+      
+      const topicObject: TrendingTopic = {
+        id: projectId,
+        title: topicText,
+        description: `Generated script about ${topicText}`,
+        category: 'technology',
+        dateStarted: new Date().toISOString(),
+        viralScore: Math.floor(Math.random() * 30) + 70, // Random score between 70-99
+        estimatedPopularity: 'high',
+      };
+      
+      setScript(scriptObject);
+      setTopic(topicObject);
     } catch (error) {
+      console.error('Failed to load script data:', error);
       toast.error('Failed to load script data');
+      router.push('/');
     } finally {
       setIsLoading(false);
     }
-  }, [router]);
+  }, [router, params]);
   
   // Generate image for a specific visual suggestion
   const generateImage = async (suggestion: string, index: number) => {
@@ -199,8 +240,9 @@ export default function MediaPage() {
           // Only play if the audio is fully loaded and ready
           if (audioRef.current && audioRef.current.readyState >= 2) {
             audioRef.current.play()
-              .catch(err => {
-                // User may need to interact with the page first due to browser autoplay policies
+              .catch(() => {
+                // Browser autoplay policy may prevent automatic playback
+                toast.info("Click play to listen to the audio narration");
               });
           }
         };
@@ -330,7 +372,7 @@ export default function MediaPage() {
         const testAudio = new Audio();
         testAudio.src = videoAudio;
         // Listen for errors in loading audio
-        testAudio.addEventListener('error', (e) => {
+        testAudio.addEventListener('error', () => {
           toast.error("The audio format may not be fully compatible with your browser");
         });
         
@@ -414,7 +456,45 @@ export default function MediaPage() {
   if (isLoading) {
     return (
       <div className="min-h-screen gradient-bg">
-        <Header />
+        <header className="w-full relative z-10">
+          <div className="container px-4 py-6 md:px-6 lg:py-8 mx-auto">
+            <div className="flex flex-col items-center justify-between space-y-4 md:flex-row md:space-y-0">
+              <Link href="/">
+                <motion.div 
+                  initial={{ opacity: 0, y: -20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.5 }}
+                  className="flex items-center space-x-2"
+                >
+                  <div className="size-10 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center">
+                    <svg 
+                      xmlns="http://www.w3.org/2000/svg" 
+                      viewBox="0 0 24 24" 
+                      fill="none" 
+                      stroke="white" 
+                      strokeWidth="2" 
+                      strokeLinecap="round" 
+                      strokeLinejoin="round" 
+                      className="w-5 h-5"
+                    >
+                      <path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z" />
+                    </svg>
+                  </div>
+                  <h1 className="text-4xl font-bold gradient-text">ShortScript</h1>
+                </motion.div>
+              </Link>
+              
+              <motion.div 
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.5, delay: 0.2 }}
+                className="flex items-center"
+              >
+                <ThemeToggle />
+              </motion.div>
+            </div>
+          </div>
+        </header>
         <Toaster />
         <main className="container px-4 mx-auto pt-8">
           <div className="flex justify-center items-center h-[70vh]">
@@ -432,7 +512,45 @@ export default function MediaPage() {
   if (!script || !topic) {
     return (
       <div className="min-h-screen gradient-bg">
-        <Header />
+        <header className="w-full relative z-10">
+          <div className="container px-4 py-6 md:px-6 lg:py-8 mx-auto">
+            <div className="flex flex-col items-center justify-between space-y-4 md:flex-row md:space-y-0">
+              <Link href="/">
+                <motion.div 
+                  initial={{ opacity: 0, y: -20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.5 }}
+                  className="flex items-center space-x-2"
+                >
+                  <div className="size-10 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center">
+                    <svg 
+                      xmlns="http://www.w3.org/2000/svg" 
+                      viewBox="0 0 24 24" 
+                      fill="none" 
+                      stroke="white" 
+                      strokeWidth="2" 
+                      strokeLinecap="round" 
+                      strokeLinejoin="round" 
+                      className="w-5 h-5"
+                    >
+                      <path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z" />
+                    </svg>
+                  </div>
+                  <h1 className="text-4xl font-bold gradient-text">ShortScript</h1>
+                </motion.div>
+              </Link>
+              
+              <motion.div 
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.5, delay: 0.2 }}
+                className="flex items-center"
+              >
+                <ThemeToggle />
+              </motion.div>
+            </div>
+          </div>
+        </header>
         <Toaster />
         <main className="container px-4 mx-auto pt-8">
           <div className="flex justify-center items-center h-[70vh]">
@@ -456,24 +574,50 @@ export default function MediaPage() {
   
   return (
     <div className="min-h-screen gradient-bg pb-16">
-      <Header />
+      <header className="w-full relative z-10">
+        <div className="container px-4 py-6 md:px-6 lg:py-8 mx-auto">
+          <div className="flex flex-col items-center justify-between space-y-4 md:flex-row md:space-y-0">
+            <Link href="/">
+              <motion.div 
+                initial={{ opacity: 0, y: -20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5 }}
+                className="flex items-center space-x-2"
+              >
+                <div className="size-10 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center">
+                  <svg 
+                    xmlns="http://www.w3.org/2000/svg" 
+                    viewBox="0 0 24 24" 
+                    fill="none" 
+                    stroke="white" 
+                    strokeWidth="2" 
+                    strokeLinecap="round" 
+                    strokeLinejoin="round" 
+                    className="w-5 h-5"
+                  >
+                    <path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z" />
+                  </svg>
+                </div>
+                <h1 className="text-4xl font-bold gradient-text">ShortScript</h1>
+              </motion.div>
+            </Link>
+            
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.5, delay: 0.2 }}
+              className="flex items-center"
+            >
+              <ThemeToggle />
+            </motion.div>
+          </div>
+        </div>
+      </header>
       <Toaster />
       
       <main className="container px-4 mx-auto">
         <div className="grid gap-6 mt-6">
           <div className="flex items-center justify-between">
-            <Button 
-              variant="ghost" 
-              onClick={handleBack}
-              className="flex items-center space-x-2"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="m12 19-7-7 7-7"/>
-                <path d="M19 12H5"/>
-              </svg>
-              <span>Back to Scripts</span>
-            </Button>
-            
             <div className="bg-gradient-to-r from-indigo-500/10 to-purple-500/10 dark:from-indigo-950/40 dark:to-purple-950/40 px-4 py-2 rounded-full">
               <span className="font-medium">{topic.title}</span>
             </div>
