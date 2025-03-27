@@ -428,35 +428,44 @@ export default function Home() {
     setIsGenerating(true);
     setGeneratingTopicId(topic.title);
     setSelectedTopic(topic);
+    // Open modal immediately to show loading state
     setScriptPreviewOpen(true);
+    // Clear any previous script to avoid showing old content
+    setGeneratedScript(null);
     
     try {
       // If there's a selectedCategory, use the hook
       if (selectedCategory) {
-        await generateScriptHook(topic.title, selectedCategory, topic.description);
-        // Add null checks and default values to prevent 'undefined' text
-        const hookText = script?.hook || ""; 
-        const mainContentText = script?.mainContent || "";
-        const callToActionText = script?.callToAction || "";
+        const scriptResult = await generateScriptHook(topic.title, selectedCategory, topic.description);
         
-        // Only add separators if content exists
-        let scriptText = hookText;
-        if (mainContentText) {
-          scriptText += (scriptText ? "\n\n" : "") + mainContentText;
+        // If the API returned a valid script object
+        if (scriptResult) {
+          // Instead of constructing a string, pass the entire script object as JSON
+          // This ensures we keep all properties including suggestedVisuals
+          setGeneratedScript(JSON.stringify(scriptResult));
+        } else {
+          // If the script generation failed, show an error message
+          toast.error('Script generation failed. Please try again.');
         }
-        if (callToActionText) {
-          scriptText += (scriptText ? "\n\n" : "") + callToActionText;
-        }
-        
-        setGeneratedScript(scriptText);
       } else {
         // Simulate API call with a timeout
         await new Promise(resolve => setTimeout(resolve, 2000));
         
-        // Fallback script generation if no category
-        const demoScript = `# ${topic.title}\n\nHey there! Did you know that ${topic.title} is trending right now?\n\nHere are some facts about ${topic.title}:\n- It started trending on ${topic.dateStarted}\n- It has a viral score of ${topic.viralScore}\n- ${topic.description}\n\nMake sure to like and follow for more trending content!`;
+        // Create a mock script object with suggested visuals for the demo
+        const demoScript = {
+          hook: `Hey there! Did you know that ${topic.title} is trending right now?`,
+          mainContent: `Here are some facts about ${topic.title}:\n- It started trending on ${topic.dateStarted}\n- It has a viral score of ${topic.viralScore}\n- ${topic.description}`,
+          callToAction: "Make sure to like and follow for more trending content!",
+          suggestedVisuals: [
+            `${topic.title} in action with dynamic lighting`,
+            `People discussing the latest trends in ${topic.title}`,
+            `Data visualization showing ${topic.title} growth`,
+            `Comparison of ${topic.title} with competitors`,
+            `Real-world applications of ${topic.title}`
+          ]
+        };
         
-        setGeneratedScript(demoScript);
+        setGeneratedScript(JSON.stringify(demoScript));
       }
     } catch (error) {
       toast.error('Failed to generate script');

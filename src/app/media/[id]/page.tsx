@@ -81,21 +81,55 @@ export default function MediaPage() {
       const scriptText = decodeURIComponent(savedScript);
       const topicText = decodeURIComponent(savedTopic);
       
-      // Parse script into sections (hook, main content, call to action)
-      const scriptParts = scriptText.split('\n\n').filter(part => part.trim() !== '');
-      
-      const scriptObject: Script = {
-        hook: scriptParts[0] || '',
-        mainContent: scriptParts[1] || '',
-        callToAction: scriptParts[2] || '',
-        suggestedVisuals: [
-          `Close-up of ${topicText} with dramatic lighting`,
-          `Person reacting to ${topicText} information`,
-          `Data visualization showing ${topicText} trends`,
-          `Comparison between ${topicText} and similar concepts`,
-          `Real-world application of ${topicText}`
-        ]
-      };
+      // Try to parse script as JSON first
+      let scriptObject: Script;
+      try {
+        // Check if the script is stored as JSON
+        const parsedScript = JSON.parse(scriptText);
+        
+        // If it's a valid JSON with our expected fields, use it directly
+        if (
+          typeof parsedScript === 'object' && 
+          parsedScript !== null &&
+          'hook' in parsedScript && 
+          'mainContent' in parsedScript && 
+          'callToAction' in parsedScript
+        ) {
+          scriptObject = {
+            hook: parsedScript.hook || '',
+            mainContent: parsedScript.mainContent || '',
+            callToAction: parsedScript.callToAction || '',
+            suggestedVisuals: Array.isArray(parsedScript.suggestedVisuals) && parsedScript.suggestedVisuals.length > 0
+              ? parsedScript.suggestedVisuals
+              : [
+                  `Close-up of ${topicText} with dramatic lighting`,
+                  `Person reacting to ${topicText} information`,
+                  `Data visualization showing ${topicText} trends`,
+                  `Comparison between ${topicText} and similar concepts`,
+                  `Real-world application of ${topicText}`
+                ]
+          };
+        } else {
+          // It's JSON but not our format, fallback to text parsing
+          throw new Error('Not in expected format');
+        }
+      } catch (parseError) {
+        // If JSON parsing fails, fall back to the original text parsing approach
+        const scriptParts = scriptText.split('\n\n').filter(part => part.trim() !== '');
+        
+        scriptObject = {
+          hook: scriptParts[0] || '',
+          mainContent: scriptParts[1] || '',
+          callToAction: scriptParts[2] || '',
+          suggestedVisuals: [
+            `Close-up of ${topicText} with dramatic lighting`,
+            `Person reacting to ${topicText} information`,
+            `Data visualization showing ${topicText} trends`,
+            `Comparison between ${topicText} and similar concepts`,
+            `Real-world application of ${topicText}`
+          ]
+        };
+      }
       
       const topicObject: TrendingTopic = {
         id: projectId,
@@ -969,7 +1003,7 @@ export default function MediaPage() {
                     <h3 className="text-sm font-medium text-blue-800 dark:text-blue-300">Opening Hook</h3>
                   </div>
                   <div className="p-4">
-                    <p className="text-sm text-gray-700 dark:text-gray-300">{script.hook}</p>
+                    <p className="text-sm text-gray-700 dark:text-gray-300">{script?.hook || ''}</p>
                   </div>
                 </div>
                 
@@ -978,7 +1012,7 @@ export default function MediaPage() {
                     <h3 className="text-sm font-medium">Main Content</h3>
                   </div>
                   <div className="p-4">
-                    <p className="text-sm">{script.mainContent}</p>
+                    <p className="text-sm">{script?.mainContent || ''}</p>
                   </div>
                 </div>
                 
@@ -987,7 +1021,7 @@ export default function MediaPage() {
                     <h3 className="text-sm font-medium text-green-800 dark:text-green-300">Call to Action</h3>
                   </div>
                   <div className="p-4">
-                    <p className="text-sm text-gray-700 dark:text-gray-300">{script.callToAction}</p>
+                    <p className="text-sm text-gray-700 dark:text-gray-300">{script?.callToAction || ''}</p>
                   </div>
                 </div>
               </div>

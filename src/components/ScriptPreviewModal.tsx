@@ -39,13 +39,29 @@ export function ScriptPreviewModal({
     
     // Handle cases where the script might be in different formats
     let hook = "", mainContent = "", callToAction = "";
+    let visualSuggestions: string[] = [];
     
-    // Try to split by double newlines first
-    const parts = script.split('\n\n').filter(part => part.trim() !== '');
-    
-    if (parts.length >= 1) hook = parts[0] || "";
-    if (parts.length >= 2) mainContent = parts[1] || "";
-    if (parts.length >= 3) callToAction = parts[2] || "";
+    try {
+      // Try to parse as JSON first to handle structured API responses
+      const scriptObj = JSON.parse(script);
+      
+      if (scriptObj.hook) hook = scriptObj.hook;
+      if (scriptObj.mainContent) mainContent = scriptObj.mainContent;
+      if (scriptObj.callToAction) callToAction = scriptObj.callToAction;
+      
+      // Use suggestedVisuals from API response if available
+      if (Array.isArray(scriptObj.suggestedVisuals) && scriptObj.suggestedVisuals.length > 0) {
+        visualSuggestions = scriptObj.suggestedVisuals;
+      }
+    } catch (e) {
+      // If it's not JSON, continue with the text parsing approach
+      // Try to split by double newlines first
+      const parts = script.split('\n\n').filter(part => part.trim() !== '');
+      
+      if (parts.length >= 1) hook = parts[0] || "";
+      if (parts.length >= 2) mainContent = parts[1] || "";
+      if (parts.length >= 3) callToAction = parts[2] || "";
+    }
     
     // If any part has "undefined" as a string, replace it with empty string
     if (hook === "undefined") hook = "";
@@ -61,14 +77,16 @@ export function ScriptPreviewModal({
     // Check if the script has all required parts
     const isComplete = Boolean(hook.trim() && mainContent.trim());
     
-    // Extract visual suggestions - these might be in the script text or should be generated
-    const visualSuggestions = [
-      `Close-up of ${topic?.title} with dramatic lighting`,
-      `Person reacting to ${topic?.title} information`,
-      `Data visualization showing ${topic?.title} trends`,
-      `Comparison between ${topic?.title} and similar concepts`,
-      `Real-world application of ${topic?.title}`
-    ];
+    // Generate fallback visuals only if none were provided by the API
+    if (visualSuggestions.length === 0) {
+      visualSuggestions = [
+        `Close-up of ${topic?.title} with dramatic lighting`,
+        `Person reacting to ${topic?.title} information`,
+        `Data visualization showing ${topic?.title} trends`,
+        `Comparison between ${topic?.title} and similar concepts`,
+        `Real-world application of ${topic?.title}`
+      ];
+    }
     
     return { hook, mainContent, callToAction, visualSuggestions, isComplete };
   }, [script, topic]);
