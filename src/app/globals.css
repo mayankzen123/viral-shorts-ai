@@ -442,3 +442,127 @@
   transform: translateY(-10px);
   transition: opacity 0.3s, transform 0.3s;
 }
+
+/* Studio Ghibli Theme Styles */
+.ghibli-gradient-bg {
+  background: linear-gradient(135deg, #e0f7fa 0%, #b3e5fc 25%, #e8f5e9 50%, #c8e6c9 75%, #d1c4e9 100%);
+}
+
+.dark .ghibli-gradient-bg {
+  background: linear-gradient(135deg, #0d47a1 0%, #004d40 30%, #1a237e 60%, #311b92 100%);
+}
+
+.ghibli-clouds {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.ghibli-cloud {
+  position: absolute;
+  background: rgba(255, 255, 255, 0.8);
+  border-radius: 50%;
+  filter: blur(15px);
+  opacity: 0.7;
+  animation: float-cloud 60s linear infinite;
+}
+
+.dark .ghibli-cloud {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+@keyframes float-cloud {
+  0% {
+    transform: translateX(-5%) translateY(0);
+  }
+  50% {
+    transform: translateX(105%) translateY(-10%);
+  }
+  100% {
+    transform: translateX(-5%) translateY(0);
+  }
+}
+
+.ghibli-card {
+  @apply backdrop-blur-sm bg-white/60 dark:bg-gray-900/60 border border-white/30 dark:border-indigo-900/30 rounded-lg shadow-lg;
+  box-shadow: 0 8px 32px rgba(31, 38, 135, 0.15);
+  transition: all 0.3s ease;
+}
+
+.ghibli-card:hover {
+  box-shadow: 0 8px 32px rgba(31, 38, 135, 0.25);
+  transform: translateY(-5px);
+}
+
+.ghibli-title {
+  @apply text-4xl font-bold;
+  color: #34495e;
+  text-shadow: 1px 1px 3px rgba(255, 255, 255, 0.5);
+}
+
+.dark .ghibli-title {
+  color: #ecf0f1;
+  text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.5);
+}
+
+.ghibli-subtitle {
+  @apply text-lg;
+  color: #5d6d7e;
+  text-shadow: 1px 1px 2px rgba(255, 255, 255, 0.3);
+}
+
+.dark .ghibli-subtitle {
+  color: #bdc3c7;
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+.ghibli-button {
+  @apply relative overflow-hidden rounded-full px-6 py-3 font-medium transition-all;
+  background: linear-gradient(135deg, #64b5f6 0%, #9575cd 100%);
+  color: white;
+  box-shadow: 0 4px 15px rgba(100, 181, 246, 0.4);
+  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.2);
+}
+
+.ghibli-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(100, 181, 246, 0.6);
+}
+
+.ghibli-button:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 10px rgba(100, 181, 246, 0.4);
+}
+
+.dark .ghibli-button {
+  background: linear-gradient(135deg, #5c6bc0 0%, #7e57c2 100%);
+  box-shadow: 0 4px 15px rgba(92, 107, 192, 0.5);
+}
+
+.ghibli-feature-card {
+  @apply backdrop-blur-sm bg-white/60 dark:bg-gray-900/50 border border-white/20 dark:border-indigo-800/30 rounded-xl p-6;
+  box-shadow: 0 4px 20px rgba(31, 38, 135, 0.1);
+  transition: all 0.3s ease;
+}
+
+.ghibli-feature-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 8px 25px rgba(31, 38, 135, 0.15);
+}
+
+.ghibli-texture {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-image: url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M11 18c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm48 25c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm-43-7c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm63 31c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM34 90c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm56-76c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM12 86c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm28-65c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm23-11c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm-6 60c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm29 22c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zM32 63c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm57-13c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm-9-21c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM60 91c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM35 41c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM12 60c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2z' fill='%23a29bfe' fill-opacity='0.05' fill-rule='evenodd'/%3E%3C/svg%3E");
+  opacity: 0.5;
+  z-index: -1;
+  pointer-events: none;
+}

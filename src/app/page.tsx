@@ -12,6 +12,8 @@ import { toast } from 'sonner';
 import { Header } from '@/components/Header';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
+import Image from 'next/image';
+import { useRouter } from 'next/navigation';
 
 /**
  * Custom hook to enforce a minimum duration for a loading state
@@ -87,474 +89,200 @@ function useMinimumLoadingTime(
 }
 
 export default function Home() {
-  // State management
-  const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
-  const [selectedTopic, setSelectedTopic] = useState<TrendingTopic | null>(null);
-  const [showCategoryGrid, setShowCategoryGrid] = useState<boolean>(true);
-  const [loadingCategory, setLoadingCategory] = useState<Category | null>(null);
-  const [isTransitioning, setIsTransitioning] = useState<boolean>(false);
-  const [scriptGenerationState, setScriptGenerationState] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
-  
-  // Use the custom hook for minimum loading time
-  const { isEnforcingMinimumTime, resetLoadingTimer } = useMinimumLoadingTime(
-    scriptGenerationState,
-    setScriptGenerationState,
-    3000 // 3 seconds minimum loading time
-  );
-  
-  // Custom hooks
-  const { topics, isLoading, error: topicsError, fetchTrendingTopics } = useTrendingTopics();
-  const { script, isGenerating, error: scriptError, generateScript } = useScriptGeneration();
+  const router = useRouter();
+  const [mounted, setMounted] = useState(false);
 
-  // Effect to handle script generation completion
-  useEffect(() => {
-    // Only update loading -> success if there's no active loading timer
-    if (script && scriptGenerationState === 'loading' && !isEnforcingMinimumTime) {
-      setScriptGenerationState('success');
-    }
-  }, [script, scriptGenerationState, isEnforcingMinimumTime]);
-
-  // Add a debug effect to track state changes (keeping just the essential debugging)
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      (window as any).__scriptState = scriptGenerationState;
-    }
-  }, [scriptGenerationState]);
-
-  // Get category theme information
-  const getCategoryTheme = (category: Category | null) => {
-    if (!category) return { gradient: "from-indigo-500 to-purple-600" };
-    
-    const categoryData = CATEGORIES.find(c => c.value === category);
-    return categoryData?.theme || { gradient: "from-indigo-500 to-purple-600" };
+  // Generate random cloud positions for the Ghibli-style background
+  const generateClouds = () => {
+    return Array(12).fill(0).map((_, i) => ({
+      id: i,
+      x: Math.random() * 100,
+      y: Math.random() * 30,
+      size: 30 + Math.random() * 100,
+      delay: Math.random() * 20,
+      duration: 40 + Math.random() * 40,
+    }));
   };
 
-  // Category data
-  const CATEGORIES = [
-    { 
-      value: 'technology' as Category, 
-      label: 'Technology',
-      theme: {
-        gradient: "from-blue-500 to-indigo-600",
-      }
+  const [clouds] = useState(generateClouds());
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  const handleGetStarted = () => {
+    // Navigate to the categories page
+    router.push('/categories');
+  };
+
+  // Features showcasing app capabilities with Ghibli-style design
+  const features = [
+    {
+      id: 1,
+      title: "Topic Selection",
+      description: "Explore diverse categories to find inspiring content ideas for your videos",
+      icon: (
+        <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M3 9h18v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V9Z" />
+          <path d="M3 9V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v4" />
+        </svg>
+      ),
+      gradient: "from-blue-300 to-cyan-400",
     },
-    { 
-      value: 'science' as Category, 
-      label: 'Science', 
-      theme: {
-        gradient: "from-purple-500 to-fuchsia-600",
-      }
+    {
+      id: 2,
+      title: "AI Script Generation",
+      description: "Create compelling short-form video scripts with just a few clicks",
+      icon: (
+        <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z" />
+          <polyline points="14 2 14 8 20 8" />
+          <line x1="16" y1="13" x2="8" y2="13" />
+          <line x1="16" y1="17" x2="8" y2="17" />
+          <polyline points="10 9 9 9 8 9" />
+        </svg>
+      ),
+      gradient: "from-purple-300 to-pink-400",
     },
-    { 
-      value: 'news' as Category, 
-      label: 'News',
-      theme: {
-        gradient: "from-orange-500 to-amber-600",
-      }
+    {
+      id: 3,
+      title: "Visual Generation",
+      description: "Bring your scripts to life with enchanting Studio Ghibli-inspired visuals",
+      icon: (
+        <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+          <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+          <circle cx="8.5" cy="8.5" r="1.5" />
+          <polyline points="21 15 16 10 5 21" />
+        </svg>
+      ),
+      gradient: "from-green-300 to-teal-400",
     },
-    { 
-      value: 'facts' as Category, 
-      label: 'Facts',
-      theme: {
-        gradient: "from-sky-500 to-cyan-600",
-      }
-    },
-    { 
-      value: 'myths' as Category, 
-      label: 'Myths & Reality',
-      theme: {
-        gradient: "from-violet-500 to-purple-600",
-      }
-    },
-    { 
-      value: 'health' as Category, 
-      label: 'Health & Wellness',
-      theme: {
-        gradient: "from-green-500 to-emerald-600",
-      }
-    },
-    { 
-      value: 'entertainment' as Category, 
-      label: 'Entertainment',
-      theme: {
-        gradient: "from-red-500 to-rose-600",
-      }
-    },
-    { 
-      value: 'sports' as Category, 
-      label: 'Sports',
-      theme: {
-        gradient: "from-yellow-500 to-amber-600",
-      }
-    },
-    { 
-      value: 'finance' as Category, 
-      label: 'Finance',
-      theme: {
-        gradient: "from-emerald-500 to-teal-600",
-      }
-    },
-    { 
-      value: 'education' as Category, 
-      label: 'Education',
-      theme: {
-        gradient: "from-blue-400 to-blue-600",
-      }
-    },
-    { 
-      value: 'space_exploration' as Category, 
-      label: 'Space Exploration',
-      theme: {
-        gradient: "from-indigo-500 to-purple-700",
-      }
-    },
+    {
+      id: 4,
+      title: "Audio Narration",
+      description: "Add professional voiceovers to complement your magical visuals",
+      icon: (
+        <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />
+          <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
+          <line x1="12" y1="19" x2="12" y2="23" />
+          <line x1="8" y1="23" x2="16" y2="23" />
+        </svg>
+      ),
+      gradient: "from-amber-300 to-orange-400",
+    }
   ];
 
-  // Handle category selection - only fetch here, not in the useEffect
-  const handleCategorySelect = async (category: Category) => {
-    setSelectedCategory(category);
-    setLoadingCategory(category);
-    setIsTransitioning(true);
-    
-    try {
-      await fetchTrendingTopics(category);
-      
-      // Short delay for animation
-      setTimeout(() => {
-        setShowCategoryGrid(false);
-        setIsTransitioning(false);
-      }, 1000);
-    } catch (error) {
-      toast.error('Failed to fetch trending topics');
-      setIsTransitioning(false);
-    } finally {
-      setLoadingCategory(null);
-    }
-  };
-
-  // Handle topic selection and script generation
-  const handleTopicSelect = useCallback(async (topic: TrendingTopic) => {
-    // Now set the new topic
-    setSelectedTopic(topic);
-    
-    if (!selectedCategory) return;
-    
-    // Start loading
-    setScriptGenerationState('loading');
-
-    try {
-      // Make the API call
-      const scriptData = await generateScript(topic.title, selectedCategory, topic.description);
-      
-      if (scriptData) {
-        setScriptGenerationState('success');
-      } else {
-        setScriptGenerationState('error');
-        toast.error('Failed to generate script');
-      }
-    } catch (error) {
-      setScriptGenerationState('error');
-      toast.error('Failed to generate script');
-    }
-  }, [selectedCategory, generateScript, resetLoadingTimer]);
-
-  // Helper function to get trending topics array safely
-  const getTrendingTopics = () => {
-    if (!topics) return [];
-    
-    // Handle the trendingTopics structure from the OpenAI API
-    if (topics.trendingTopics && Array.isArray(topics.trendingTopics)) {
-      return topics.trendingTopics;
-    }
-    
-    // Fallback to topics property if it exists
-    if (topics.topics && Array.isArray(topics.topics)) {
-      return topics.topics;
-    }
-    
-    return [];
-  };
-
-  // Check if we have topics to display
-  const hasTopics = getTrendingTopics().length > 0;
-
-  // Handler to go back to category selection
-  const handleBackToCategories = () => {
-    setShowCategoryGrid(true);
-    setSelectedTopic(null);
-    setScriptGenerationState('idle');
-  };
-  
-  const getCategoryLabel = (category: Category | null) => {
-    if (!category) return '';
-    const found = CATEGORIES.find(c => c.value === category);
-    return found?.label || category.charAt(0).toUpperCase() + category.slice(1);
-  };
-
   return (
-    <div className="min-h-screen gradient-bg pb-16">
+    <div className="relative min-h-screen ghibli-gradient-bg overflow-hidden">
+      {/* Ghibli-inspired subtle texture */}
+      <div className="ghibli-texture"></div>
+      
+      {/* Floating clouds animation */}
+      <div className="ghibli-clouds">
+        {mounted && clouds.map((cloud) => (
+          <div
+            key={cloud.id}
+            className="ghibli-cloud"
+            style={{
+              width: `${cloud.size}px`,
+              height: `${cloud.size * 0.6}px`,
+              left: `${cloud.x}%`,
+              top: `${cloud.y}%`,
+              animationDelay: `${cloud.delay}s`,
+              animationDuration: `${cloud.duration}s`,
+            }}
+          />
+        ))}
+      </div>
+      
       <Header />
-      <Toaster />
-
-      <main className="container px-4 mx-auto">
-        <div className="grid gap-8">
-          {showCategoryGrid ? (
-            <CategoryGrid 
-              onCategorySelect={handleCategorySelect}
-              isLoading={isLoading}
-              loadingCategory={loadingCategory}
-            />
-          ) : (
-            <>
-              <div className="flex items-center justify-between mt-4 mb-4">
-                <motion.div 
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ duration: 0.3 }}
-                >
-                  <Button 
-                    variant="ghost" 
-                    onClick={handleBackToCategories}
-                    className="flex items-center space-x-2"
-                  >
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="m12 19-7-7 7-7"/>
-                      <path d="M19 12H5"/>
-                    </svg>
-                    <span>Back to Categories</span>
-                  </Button>
-                </motion.div>
-                {selectedCategory && (
-                  <motion.div
-                    initial={{ opacity: 0, y: -10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="bg-gradient-to-r from-indigo-500/10 to-purple-500/10 dark:from-indigo-950/40 dark:to-purple-950/40 px-4 py-2 rounded-full"
-                  >
-                    <span className="font-medium">{getCategoryLabel(selectedCategory)}</span>
-                  </motion.div>
-                )}
-              </div>
-
-              {topicsError && (
-                <motion.div 
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  className="bg-red-50 dark:bg-red-950/20 text-red-800 dark:text-red-300 p-4 rounded-md frost-glass border border-red-200 dark:border-red-900/30"
-                >
-                  <div className="flex items-center">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2 text-red-600 dark:text-red-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <circle cx="12" cy="12" r="10" />
-                      <line x1="12" x2="12" y1="8" y2="12" />
-                      <line x1="12" x2="12.01" y1="16" y2="16" />
-                    </svg>
-                    <span>Error: {topicsError}</span>
-                  </div>
-                </motion.div>
-              )}
-
-              {isLoading && (
-                <motion.div 
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  className="text-center p-8 frost-glass rounded-xl animate-pulse"
-                >
-                  <div className="inline-flex items-center justify-center size-14 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600">
-                    <div className="size-8 rounded-full border-2 border-white dark:border-gray-900 border-t-transparent animate-spin"></div>
-                  </div>
-                  <p className="mt-4 font-medium">Loading trending topics...</p>
-                  <p className="text-sm text-muted-foreground mt-1">This may take a few moments</p>
-                </motion.div>
-              )}
-
-              {hasTopics && selectedCategory && !isLoading && (
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                  {/* Left side - Topic List */}
-                  <div className="flex flex-col space-y-1">
-                    <TrendingTopicsList 
-                      topics={getTrendingTopics()} 
-                      category={selectedCategory} 
-                      onTopicSelect={handleTopicSelect}
-                      isGenerating={scriptGenerationState === 'loading'}
-                      scriptGenerationState={scriptGenerationState}
-                    />
-                  </div>
-                  
-                  {/* Right side - Script Display */}
-                  <div className="flex flex-col">
-                    {scriptGenerationState === 'success' && script && selectedTopic ? (
-                      <AnimatePresence mode="wait">
-                        <motion.div
-                          key="success"
-                          initial={{ opacity: 0, y: 20 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          exit={{ opacity: 0, y: -20 }}
-                          className="h-full"
-                        >
-                          <ScriptDisplay 
-                            script={script} 
-                            topic={selectedTopic} 
-                          />
-                        </motion.div>
-                      </AnimatePresence>
-                    ) : (
-                      <AnimatePresence mode="wait">
-                        <motion.div
-                          key="empty"
-                          initial={{ opacity: 0 }}
-                          animate={{ opacity: 1 }}
-                          exit={{ opacity: 0 }}
-                          className="h-full flex items-center justify-center"
-                        >
-                          <div className="text-center p-8 frost-glass rounded-xl w-full">
-                            {scriptGenerationState === 'idle' ? (
-                              <>
-                                <div className="inline-flex items-center justify-center size-16 rounded-full bg-gradient-to-br from-gray-200 to-gray-300 dark:from-gray-700 dark:to-gray-800 text-gray-500 dark:text-gray-400 mb-4">
-                                  <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                    <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z" />
-                                    <polyline points="14 2 14 8 20 8" />
-                                  </svg>
-                                </div>
-                                <h3 className="text-xl font-medium mb-2">Your Script Will Appear Here</h3>
-                                <p className="text-muted-foreground">
-                                  Select a trending topic from the list to automatically generate a professional script.
-                                </p>
-                              </>
-                            ) : scriptGenerationState === 'error' ? (
-                              <>
-                                <div className="inline-flex items-center justify-center size-16 rounded-full bg-red-100 dark:bg-red-900/30 text-red-500 mb-4">
-                                  <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                    <circle cx="12" cy="12" r="10" />
-                                    <line x1="12" x2="12" y1="8" y2="12" />
-                                    <line x1="12" x2="12.01" y1="16" y2="16" />
-                                  </svg>
-                                </div>
-                                <h3 className="text-xl font-medium mb-2">Script Generation Failed</h3>
-                                <p className="text-muted-foreground">
-                                  There was an error generating your script. Please try again or select a different topic.
-                                </p>
-                              </>
-                            ) : null}
-                          </div>
-                        </motion.div>
-                      </AnimatePresence>
-                    )}
-                  </div>
-                </div>
-              )}
-
-              {/* Script generation loading state */}
-              <AnimatePresence mode="wait">
-                {scriptGenerationState === 'loading' && (
-                  <motion.div 
-                    key="script-loading-overlay"
-                    initial={{ opacity: 0, scale: 0.9 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    exit={{ opacity: 0, scale: 0.9 }}
-                    transition={{ duration: 0.3 }}
-                    className="fixed inset-0 z-[100] flex items-center justify-center"
-                  >
-                    <div className="absolute inset-0 bg-background/80 backdrop-blur-sm" />
-                    <motion.div 
-                      className="relative bg-card text-card-foreground p-10 rounded-lg shadow-lg frost-glass max-w-md mx-auto text-center"
-                      initial={{ y: 20 }}
-                      animate={{ y: 0 }}
-                      transition={{ type: "spring", damping: 20 }}
-                    >
-                      <div className="p-4">
-                        <div className="relative size-20 mx-auto">
-                          <div className="absolute inset-0 size-20 rounded-full bg-gradient-to-r from-indigo-400 to-purple-500 opacity-20 animate-pulse"></div>
-                          <div className="absolute inset-0 size-20 border-4 border-indigo-500/30 rounded-full"></div>
-                          <div className="absolute inset-2 size-16 border-4 border-t-indigo-600 border-indigo-600/20 rounded-full animate-spin"></div>
-                          <div className="absolute inset-6 size-8 border-4 border-t-purple-600 border-purple-600/20 rounded-full animate-spin-reverse"></div>
-                        </div>
-                        
-                        <div className="mt-6">
-                          <h3 className="text-xl font-semibold mb-2">Crafting Your Script</h3>
-                          <p className="text-muted-foreground mb-2">Creating a professional script for:</p>
-                          <p className="font-medium text-lg gradient-text mb-4">{selectedTopic?.title}</p>
-                          <div className="space-y-2 text-sm text-left">
-                            <div className="flex items-center space-x-2">
-                              <svg className="text-indigo-500" width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                <path d="M7.75 12L10.25 14.5L16.25 8.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                                <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2" />
-                              </svg>
-                              <span>Analyzing trending topic</span>
-                            </div>
-                            <div className="flex items-center space-x-2">
-                              <svg className="text-indigo-500" width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                <path d="M7.75 12L10.25 14.5L16.25 8.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                                <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2" />
-                              </svg>
-                              <span>Creating attention-grabbing hook</span>
-                            </div>
-                            <div className="flex items-center space-x-2">
-                              <div className="animate-pulse">
-                                <div className="h-5 w-5 bg-indigo-500/20 rounded-full"></div>
-                              </div>
-                              <span>Developing engaging main content<span className="loading-dots"></span></span>
-                            </div>
-                            <div className="flex items-center space-x-2">
-                              <div className="h-5 w-5 bg-gray-200 dark:bg-gray-700 rounded-full"></div>
-                              <span className="text-muted-foreground">Crafting call to action</span>
-                            </div>
-                            <div className="flex items-center space-x-2">
-                              <div className="h-5 w-5 bg-gray-200 dark:bg-gray-700 rounded-full"></div>
-                              <span className="text-muted-foreground">Suggesting visual elements</span>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </motion.div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-
-              {scriptError && (
-                <motion.div 
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  className="bg-red-50 dark:bg-red-950/20 text-red-800 dark:text-red-300 p-4 rounded-md frost-glass border border-red-200 dark:border-red-900/30"
-                >
-                  <div className="flex items-center">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2 text-red-600 dark:text-red-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <circle cx="12" cy="12" r="10" />
-                      <line x1="12" x2="12" y1="8" y2="12" />
-                      <line x1="12" x2="12.01" y1="16" y2="16" />
-                    </svg>
-                    <span>Error: {scriptError}</span>
-                  </div>
-                </motion.div>
-              )}
-            </>
-          )}
-        </div>
-      </main>
-
-      {/* Full page transition overlay */}
-      <AnimatePresence>
-        {isTransitioning && selectedCategory && (
-          <motion.div 
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.3 }}
-            className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-md"
+      
+      <main className="container mx-auto px-4 pb-20 relative z-10">
+        {/* Hero section */}
+        <section className="mt-16 md:mt-24 text-center">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, ease: "easeOut" }}
+            className="max-w-3xl mx-auto"
           >
-            <motion.div 
-              initial={{ scale: 0.8, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              transition={{ duration: 0.4, delay: 0.1 }}
-              className="text-center p-10"
+            <h1 className="ghibli-title mb-6">Create Magical Short Videos with Studio Ghibli Style</h1>
+            <p className="ghibli-subtitle mb-8 max-w-2xl mx-auto">
+              Bring your stories to life with AI-generated scripts and enchanting Studio Ghibli-inspired visuals that captivate your audience.
+            </p>
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ delay: 0.2, duration: 0.5 }}
             >
-              <div className={`inline-flex items-center justify-center size-20 rounded-full bg-gradient-to-br ${getCategoryTheme(selectedCategory).gradient}`}>
-                <div className="size-12 rounded-full border-3 border-white/30 border-t-white animate-spin"></div>
-              </div>
-              <p className="mt-6 text-xl font-medium">Loading {getCategoryLabel(selectedCategory)}</p>
-              <p className="text-muted-foreground mt-2">Finding the hottest trending topics...</p>
+              <Button 
+                onClick={handleGetStarted}
+                className="ghibli-button"
+              >
+                Get Started
+              </Button>
             </motion.div>
           </motion.div>
-        )}
-      </AnimatePresence>
+        </section>
+        
+        {/* Features section */}
+        <section className="mt-24 md:mt-32">
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.5, delay: 0.3 }}
+            className="text-center mb-16"
+          >
+            <h2 className="text-3xl font-bold mb-4">Create Videos with the Magic of Ghibli</h2>
+            <p className="text-muted-foreground max-w-2xl mx-auto">
+              Our platform combines AI-powered content creation with the whimsical style of Studio Ghibli animations.
+            </p>
+          </motion.div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+            {features.map((feature, index) => (
+              <motion.div
+                key={feature.id}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5, delay: 0.1 * index + 0.4 }}
+                className="ghibli-feature-card"
+              >
+                <div className={`h-12 w-12 rounded-full bg-gradient-to-br ${feature.gradient} flex items-center justify-center text-white mb-4`}>
+                  {feature.icon}
+                </div>
+                <h3 className="font-bold text-xl mb-2">{feature.title}</h3>
+                <p className="text-muted-foreground text-sm">{feature.description}</p>
+              </motion.div>
+            ))}
+          </div>
+        </section>
+        
+        {/* Call to action */}
+        <section className="mt-24 md:mt-32">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.6 }}
+            className="ghibli-card max-w-3xl mx-auto p-10 text-center"
+          >
+            <h2 className="text-2xl font-bold mb-4">Ready to Create Something Magical?</h2>
+            <p className="text-muted-foreground mb-6">
+              Join thousands of creators who are using our platform to craft engaging short-form videos with the enchanting Studio Ghibli aesthetic.
+            </p>
+            <Button 
+              onClick={handleGetStarted}
+              className="ghibli-button"
+              size="lg"
+            >
+              Start Creating
+            </Button>
+          </motion.div>
+        </section>
+      </main>
+      
+      <Toaster position="bottom-right" />
     </div>
   );
 }

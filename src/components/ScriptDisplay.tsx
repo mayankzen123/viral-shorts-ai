@@ -11,10 +11,13 @@ import { useRouter } from 'next/navigation';
 
 interface ScriptDisplayProps {
   script: Script;
-  topic: TrendingTopic | null;
+  topic?: TrendingTopic | null;
+  isLoading?: boolean;
+  error?: string | null;
+  onRegenerate?: () => void;
 }
 
-export function ScriptDisplay({ script, topic }: ScriptDisplayProps) {
+export function ScriptDisplay({ script, topic, isLoading = false, error = null, onRegenerate }: ScriptDisplayProps) {
   const MotionCard = motion(Card);
   const router = useRouter();
   
@@ -34,13 +37,15 @@ export function ScriptDisplay({ script, topic }: ScriptDisplayProps) {
   const proceedToMediaGeneration = () => {
     // Save the script and topic to localStorage for the media page to access
     localStorage.setItem('selectedScript', JSON.stringify(script));
-    localStorage.setItem('selectedTopic', JSON.stringify(topic));
+    if (topic) {
+      localStorage.setItem('selectedTopic', JSON.stringify(topic));
+    }
     
     // Navigate to the media generation page
     router.push(`/media/${topic?.title?.replace(/\s+/g, '-').toLowerCase() || 'script'}`);
   };
   
-  if (!topic) {
+  if (isLoading) {
     return (
       <MotionCard 
         className="w-full frost-glass p-6 text-center"
@@ -48,18 +53,39 @@ export function ScriptDisplay({ script, topic }: ScriptDisplayProps) {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
       >
-        <div className="py-8">
+        <div className="py-8 flex flex-col items-center">
           <div className="mb-4">
-            <div className="size-16 bg-gray-200 dark:bg-gray-800 rounded-full mx-auto flex items-center justify-center">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-gray-400 dark:text-gray-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" />
-                <path d="M12 17h.01" />
-                <path d="M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20Z" />
+            <div className="size-16 rounded-full mx-auto flex items-center justify-center">
+              <div className="w-12 h-12 border-4 border-primary/30 border-t-primary rounded-full animate-spin"></div>
+            </div>
+          </div>
+          <h3 className="text-lg font-medium mb-2">Generating Script</h3>
+          <p className="text-muted-foreground">Please wait while we craft your content...</p>
+        </div>
+      </MotionCard>
+    );
+  }
+  
+  if (error) {
+    return (
+      <MotionCard 
+        className="w-full frost-glass p-6 text-center"
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+      >
+        <div className="py-8 flex flex-col items-center">
+          <div className="mb-4">
+            <div className="size-16 bg-red-100 dark:bg-red-900/30 rounded-full mx-auto flex items-center justify-center">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-red-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="10" />
+                <line x1="12" x2="12" y1="8" y2="12" />
+                <line x1="12" x2="12.01" y1="16" y2="16" />
               </svg>
             </div>
           </div>
-          <h3 className="text-lg font-medium mb-2">Topic Not Found</h3>
-          <p className="text-muted-foreground">No topic was selected to generate this script.</p>
+          <h3 className="text-lg font-medium mb-2">Error Generating Script</h3>
+          <p className="text-muted-foreground mb-4">{error || "An error occurred while generating your script. Please try again."}</p>
         </div>
       </MotionCard>
     );
@@ -76,33 +102,56 @@ export function ScriptDisplay({ script, topic }: ScriptDisplayProps) {
         <div className="flex flex-col space-y-2">
           <div className="flex items-start justify-between">
             <h2 className="text-xl md:text-2xl font-bold text-gradient-to-r from-blue-600 to-indigo-600 dark:from-blue-400 dark:to-indigo-400">
-              {topic.title}
+              {topic?.title || "Generated Script"}
             </h2>
-            <Button 
-              variant="outline" 
-              size="sm"
-              className="flex items-center space-x-1 text-xs"
-              onClick={() => copyToClipboard(`${script.hook}\n\n${script.mainContent}\n\n${script.callToAction}`, "Complete script")}
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 mr-1" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <rect width="14" height="14" x="8" y="8" rx="2" ry="2" />
-                <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2" />
-              </svg>
-              <span>Copy All</span>
-            </Button>
+            <div className="flex gap-2">
+              <Button 
+                variant="outline" 
+                size="sm"
+                className="flex items-center space-x-1 text-xs"
+                onClick={() => copyToClipboard(`${script.hook}\n\n${script.mainContent}\n\n${script.callToAction}`, "Complete script")}
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 mr-1" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <rect width="14" height="14" x="8" y="8" rx="2" ry="2" />
+                  <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2" />
+                </svg>
+                <span>Copy All</span>
+              </Button>
+            </div>
           </div>
           <div className="flex items-center justify-between">
             <p className="text-sm text-muted-foreground">A professional short video script optimized for engagement</p>
-            <div className="flex items-center">
-              <span className="text-xs font-medium mr-2">Viral Score: </span>
-              <div className="h-2 w-16 bg-gray-200 dark:bg-gray-800 rounded-full overflow-hidden mr-1">
-                <div 
-                  className="h-full bg-gradient-to-r from-blue-500 to-indigo-600"
-                  style={{ width: `${topic.viralScore}%` }}
-                ></div>
+            {topic && (
+              <div className="flex items-center">
+                <span className="text-xs font-medium mr-2">Viral Score: </span>
+                <div className="h-2 w-16 bg-gray-200 dark:bg-gray-800 rounded-full overflow-hidden mr-1">
+                  <div 
+                    className="h-full bg-gradient-to-r from-blue-500 to-indigo-600"
+                    style={{ width: `${topic.viralScore}%` }}
+                  ></div>
+                </div>
+                <span className="text-xs font-medium">{topic.viralScore}</span>
               </div>
-              <span className="text-xs font-medium">{topic.viralScore}</span>
-            </div>
+            )}
+          </div>
+          
+          {/* Added Proceed to Media Creation Button at the top */}
+          <div className="pt-2">
+            <Button 
+              onClick={proceedToMediaGeneration}
+              size="sm"
+              className="w-full bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white"
+            >
+              <div className="flex items-center">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <polygon points="5 3 19 12 5 21 5 3" />
+                </svg>
+                <div>
+                  <span className="font-medium">Proceed to Media Creation</span>
+                  <span className="hidden sm:inline ml-1 text-xs opacity-90">- Generate Images & Audio</span>
+                </div>
+              </div>
+            </Button>
           </div>
         </div>
       </div>
@@ -223,25 +272,6 @@ export function ScriptDisplay({ script, topic }: ScriptDisplayProps) {
                 ))}
               </ul>
             </div>
-          </div>
-          
-          {/* Proceed to Media Generation Button */}
-          <div className="mt-8 text-center">
-            <Button 
-              onClick={proceedToMediaGeneration}
-              size="lg"
-              className="w-full md:w-auto px-8 py-6 h-auto"
-            >
-              <div className="flex items-center">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <polygon points="5 3 19 12 5 21 5 3" />
-                </svg>
-                <div className="text-left">
-                  <span className="block font-medium">Proceed to Media Creation</span>
-                  <span className="block text-xs opacity-80">Generate Images & Audio Narration</span>
-                </div>
-              </div>
-            </Button>
           </div>
         </CardContent>
       </div>

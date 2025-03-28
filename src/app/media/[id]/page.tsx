@@ -56,6 +56,18 @@ export default function MediaPage() {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [selectedVoice, setSelectedVoice] = useState<string>("nova");
   
+  // Generate random cloud positions for the Ghibli-style background
+  const [clouds] = useState(() => {
+    return Array(8).fill(0).map((_, i) => ({
+      id: i,
+      x: Math.random() * 100,
+      y: Math.random() * 30,
+      size: 30 + Math.random() * 100,
+      delay: Math.random() * 20,
+      duration: 40 + Math.random() * 40,
+    }));
+  });
+  
   // Fetch the script and topic from localStorage on mount
   useEffect(() => {
     try {
@@ -413,10 +425,11 @@ export default function MediaPage() {
   
   if (isLoading) {
     return (
-      <div className="min-h-screen gradient-bg">
+      <div className="min-h-screen ghibli-gradient-bg relative overflow-hidden">
+        <div className="ghibli-texture"></div>
         <Header />
         <Toaster />
-        <main className="container px-4 mx-auto pt-8">
+        <main className="container px-4 mx-auto pt-8 relative z-10">
           <div className="flex justify-center items-center h-[70vh]">
             <div className="text-center">
               <div className="size-16 border-4 border-primary/30 border-t-primary rounded-full animate-spin mx-auto mb-4"></div>
@@ -431,10 +444,11 @@ export default function MediaPage() {
   
   if (!script || !topic) {
     return (
-      <div className="min-h-screen gradient-bg">
+      <div className="min-h-screen ghibli-gradient-bg relative overflow-hidden">
+        <div className="ghibli-texture"></div>
         <Header />
         <Toaster />
-        <main className="container px-4 mx-auto pt-8">
+        <main className="container px-4 mx-auto pt-8 relative z-10">
           <div className="flex justify-center items-center h-[70vh]">
             <div className="text-center max-w-md">
               <div className="size-16 bg-red-100 dark:bg-red-900/30 text-red-500 rounded-full mx-auto mb-4 flex items-center justify-center">
@@ -455,11 +469,32 @@ export default function MediaPage() {
   }
   
   return (
-    <div className="min-h-screen gradient-bg pb-16">
+    <div className="min-h-screen ghibli-gradient-bg relative overflow-hidden pb-16">
+      {/* Ghibli-inspired subtle texture */}
+      <div className="ghibli-texture"></div>
+      
+      {/* Floating clouds animation */}
+      <div className="ghibli-clouds">
+        {clouds.map((cloud) => (
+          <div
+            key={cloud.id}
+            className="ghibli-cloud"
+            style={{
+              width: `${cloud.size}px`,
+              height: `${cloud.size * 0.6}px`,
+              left: `${cloud.x}%`,
+              top: `${cloud.y}%`,
+              animationDelay: `${cloud.delay}s`,
+              animationDuration: `${cloud.duration}s`,
+            }}
+          />
+        ))}
+      </div>
+      
       <Header />
       <Toaster />
       
-      <main className="container px-4 mx-auto">
+      <main className="container px-4 mx-auto relative z-10">
         <div className="grid gap-6 mt-6">
           <div className="flex items-center justify-between">
             <Button 
