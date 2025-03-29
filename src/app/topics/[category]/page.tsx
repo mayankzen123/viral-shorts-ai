@@ -193,6 +193,8 @@ export default function TopicsPage() {
                   script={script || { hook: '', mainContent: '', callToAction: '', suggestedVisuals: [] }} 
                   isLoading={isGenerating}
                   error={scriptError}
+                  topic={selectedTopic ? topics?.trendingTopics?.find(t => t.title === selectedTopic) || 
+                    topics?.topics?.find(t => t.title === selectedTopic) || null : null}
                 />
               </motion.div>
             )}
