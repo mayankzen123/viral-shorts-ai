@@ -8,6 +8,7 @@ import { toast } from 'sonner';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { useUser } from '@clerk/nextjs';
 
 interface ScriptDisplayProps {
   script: Script;
@@ -20,6 +21,7 @@ interface ScriptDisplayProps {
 export function ScriptDisplay({ script, topic, isLoading = false, error = null, onRegenerate }: ScriptDisplayProps) {
   const MotionCard = motion(Card);
   const router = useRouter();
+  const { isSignedIn, isLoaded } = useUser();
   
   // Function to copy script to clipboard
   const copyToClipboard = (text: string, section: string) => {
@@ -35,6 +37,20 @@ export function ScriptDisplay({ script, topic, isLoading = false, error = null, 
   
   // Function to proceed to media generation page
   const proceedToMediaGeneration = () => {
+    // Check if user authentication has loaded
+    if (!isLoaded) {
+      toast.error("Authentication is still loading. Please try again.");
+      return;
+    }
+
+    // Check if user is signed in
+    if (!isSignedIn) {
+      toast.error("Please sign in to access media creation.");
+      // Redirect to sign-in page
+      router.push('/sign-in');
+      return;
+    }
+    
     // Save the script and topic to localStorage for the media page to access
     localStorage.setItem('selectedScript', JSON.stringify(script));
     if (topic) {
@@ -42,7 +58,7 @@ export function ScriptDisplay({ script, topic, isLoading = false, error = null, 
     }
     
     // Navigate to the media generation page
-    router.push(`/media/${topic?.title?.replace(/\s+/g, '-').toLowerCase() || 'script'}`);
+    router.push('/media/script');
   };
   
   if (isLoading) {

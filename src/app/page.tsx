@@ -14,6 +14,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
+import { useUser } from '@clerk/nextjs';
 
 /**
  * Custom hook to enforce a minimum duration for a loading state
@@ -90,6 +91,7 @@ function useMinimumLoadingTime(
 
 export default function Home() {
   const router = useRouter();
+  const { isSignedIn, isLoaded } = useUser();
   const [mounted, setMounted] = useState(false);
 
   // Generate random cloud positions for the Ghibli-style background
@@ -111,7 +113,20 @@ export default function Home() {
   }, []);
 
   const handleGetStarted = () => {
-    // Navigate to the categories page
+    // Check if user authentication has loaded
+    if (!isLoaded) {
+      toast.error("Authentication is still loading. Please try again.");
+      return;
+    }
+
+    // Check if user is signed in
+    if (!isSignedIn) {
+      // Redirect to sign-in page
+      router.push('/sign-in');
+      return;
+    }
+
+    // User is authenticated, navigate to categories
     router.push('/categories');
   };
 
@@ -211,26 +226,26 @@ export default function Home() {
             <p className="ghibli-subtitle mb-8 max-w-2xl mx-auto">
               Bring your stories to life with AI-generated scripts and enchanting Studio Ghibli-inspired visuals that captivate your audience.
             </p>
-            <motion.div
+                <motion.div 
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ delay: 0.2, duration: 0.5 }}
-            >
-              <Button 
+                >
+                  <Button 
                 onClick={handleGetStarted}
                 className="ghibli-button"
               >
                 Get Started
-              </Button>
-            </motion.div>
-          </motion.div>
+                  </Button>
+                </motion.div>
+                  </motion.div>
         </section>
-        
+
         {/* Features section */}
         <section className="mt-24 md:mt-32">
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
+                <motion.div 
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
             transition={{ duration: 0.5, delay: 0.3 }}
             className="text-center mb-16"
           >
@@ -238,14 +253,14 @@ export default function Home() {
             <p className="text-muted-foreground max-w-2xl mx-auto">
               Our platform combines AI-powered content creation with the whimsical style of Studio Ghibli animations.
             </p>
-          </motion.div>
-          
+                </motion.div>
+
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
             {features.map((feature, index) => (
-              <motion.div
+                <motion.div 
                 key={feature.id}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
+                          initial={{ opacity: 0, y: 20 }}
+                          animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.5, delay: 0.1 * index + 0.4 }}
                 className="ghibli-feature-card"
               >
@@ -254,14 +269,14 @@ export default function Home() {
                 </div>
                 <h3 className="font-bold text-xl mb-2">{feature.title}</h3>
                 <p className="text-muted-foreground text-sm">{feature.description}</p>
-              </motion.div>
+                    </motion.div>
             ))}
-          </div>
+                  </div>
         </section>
         
         {/* Call to action */}
         <section className="mt-24 md:mt-32">
-          <motion.div
+          <motion.div 
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.6 }}

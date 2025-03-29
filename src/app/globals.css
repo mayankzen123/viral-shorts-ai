@@ -566,3 +566,51 @@
   z-index: -1;
   pointer-events: none;
 }
+
+/* Clerk modal customization */
+.cl-modalBackdrop {
+  backdrop-filter: blur(6px);
+  background-color: rgba(0, 0, 0, 0.25) !important;
+}
+
+.cl-modalContent {
+  animation: modal-slide-in 0.3s ease-out forwards !important;
+}
+
+.cl-card {
+  border-radius: 1rem !important;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12), 0 0 1px rgba(0, 0, 0, 0.1) !important;
+  background-color: hsl(var(--background)) !important;
+  border: 1px solid hsl(var(--border)) !important;
+  overflow: hidden !important;
+}
+
+.cl-socialButtonsIconButton {
+  transition: transform 0.2s ease !important;
+}
+
+.cl-socialButtonsIconButton:hover {
+  transform: translateY(-2px) !important;
+}
+
+.cl-formButtonPrimary {
+  transition: all 0.2s ease !important;
+  transform: translateY(0) !important;
+  box-shadow: 0 2px 10px rgba(124, 58, 237, 0.1) !important;
+}
+
+.cl-formButtonPrimary:hover {
+  transform: translateY(-1px) !important;
+  box-shadow: 0 4px 12px rgba(124, 58, 237, 0.2) !important;
+}
+
+@keyframes modal-slide-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}

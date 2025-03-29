@@ -12,11 +12,13 @@ import { Category, TrendingTopic } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Toaster } from '@/components/ui/sonner';
 import { toast } from 'sonner';
+import { useUser } from '@clerk/nextjs';
 
 export default function TopicsPage() {
   const router = useRouter();
   const params = useParams();
   const category = params.category as Category;
+  const { isSignedIn, isLoaded } = useUser();
   
   const [mounted, setMounted] = useState(false);
   const [selectedTopic, setSelectedTopic] = useState<string | null>(null);
@@ -72,6 +74,35 @@ export default function TopicsPage() {
 
   const handleBackToCategories = () => {
     router.push('/categories');
+  };
+
+  const proceedToMediaGeneration = () => {
+    // Check if user authentication has loaded
+    if (!isLoaded) {
+      toast.error("Authentication is still loading. Please try again.");
+      return;
+    }
+
+    // Check if user is signed in
+    if (!isSignedIn) {
+      toast.error("Please sign in to access media creation.");
+      // Redirect to sign-in page
+      router.push('/sign-in');
+      return;
+    }
+
+    if (script) {
+      // Save the script and topic data for the media page
+      localStorage.setItem('selectedScript', JSON.stringify(script));
+      if (selectedTopic) {
+        localStorage.setItem('selectedTopic', JSON.stringify(selectedTopic));
+      }
+      
+      // Navigate to the media page with a simple ID parameter
+      router.push('/media/script');
+    } else {
+      toast.error('Please select or generate a script first');
+    }
   };
 
   if (!mounted) return null;
