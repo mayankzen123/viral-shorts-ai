@@ -25,6 +25,7 @@
     "@remotion/player": "^4.0.280",
     "@remotion/renderer": "^4.0.280",
     "@vercel/analytics": "^1.5.0",
+    "@vercel/blob": "^1.0.0",
     "ai": "^4.1.61",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
