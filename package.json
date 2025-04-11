@@ -29,6 +29,7 @@
     "ai": "^4.1.61",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "creatomate": "^1.2.1",
     "framer-motion": "^12.5.0",
     "fs-extra": "^11.3.0",
     "lucide-react": "^0.482.0",

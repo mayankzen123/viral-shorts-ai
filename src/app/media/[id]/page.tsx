@@ -9,6 +9,8 @@ import { motion } from 'framer-motion';
 import { Header } from '@/components/Header';
 import { Toaster } from '@/components/ui/sonner';
 import { RemotionPlayer } from '@/components/RemotionPlayer';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Progress } from '@/components/ui/progress';
 
 interface ImageState {
   [key: number]: {
@@ -33,6 +35,13 @@ interface VideoState {
     images: string[];
     audio: string;
   };
+}
+
+interface CreatomateRenderState {
+  isRendering: boolean;
+  renderProgress: number;
+  renderedVideoUrl: string | null;
+  error: string | null;
 }
 
 export default function MediaPage() {
@@ -66,6 +75,14 @@ export default function MediaPage() {
       delay: Math.random() * 20,
       duration: 40 + Math.random() * 40,
     }));
+  });
+  
+  // Add this state for Creatomate rendering
+  const [creatomateState, setCreatomateState] = useState<CreatomateRenderState>({
+    isRendering: false,
+    renderProgress: 0,
+    renderedVideoUrl: null,
+    error: null
   });
   
   // Fetch the script and topic from localStorage on mount
@@ -378,6 +395,107 @@ export default function MediaPage() {
         error: error.message
       });
     }
+  };
+  
+  // Add this new function for high-quality video rendering
+  const renderHighQualityVideo = async () => {
+    if (!script || !topic) return;
+    
+    // Check if both audio and all images have been generated
+    const audioGenerated = audioState.url !== null;
+    const allImagesGenerated = script.suggestedVisuals.every(
+      (_, index) => imageState[index]?.url
+    );
+    
+    if (!audioGenerated || !allImagesGenerated) {
+      toast.error("Please generate both audio and all images before rendering a high-quality video");
+      return;
+    }
+    
+    try {
+      // Set rendering state
+      setCreatomateState({
+        isRendering: true,
+        renderProgress: 10,
+        renderedVideoUrl: null,
+        error: null
+      });
+      
+      // Start progress animation
+      const interval = setInterval(() => {
+        setCreatomateState((prev) => ({
+          ...prev,
+          renderProgress: prev.renderProgress >= 90 ? 90 : prev.renderProgress + 5
+        }));
+      }, 1000);
+      
+      // Collect all image URLs - ensure all URLs are valid
+      const imageUrls = script.suggestedVisuals
+        .map((_, index) => imageState[index]?.url)
+        .filter((url): url is string => Boolean(url));
+      
+      // Call the Creatomate API endpoint
+      const response = await fetch('/api/creatomate-render', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ 
+          images: imageUrls,
+          audioUrl: audioState.url,
+          title: topic.title
+        }),
+      });
+      
+      clearInterval(interval);
+      
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to render high-quality video');
+      }
+      
+      const data = await response.json();
+      
+      // Set the rendered video URL
+      if (data.renderUrl) {
+        setCreatomateState({
+          isRendering: false,
+          renderProgress: 100,
+          renderedVideoUrl: data.renderUrl,
+          error: null
+        });
+        toast.success('High-quality video rendered successfully!');
+      } else {
+        throw new Error('No video URL returned from render service');
+      }
+    } catch (error: any) {
+      console.error('Error rendering high-quality video:', error);
+      setCreatomateState({
+        isRendering: false,
+        renderProgress: 0,
+        renderedVideoUrl: null,
+        error: error.message
+      });
+      toast.error(error.message || 'Failed to render high-quality video');
+    }
+  };
+  
+  // Add this function to download the Creatomate rendered video
+  const downloadHighQualityVideo = () => {
+    if (!creatomateState.renderedVideoUrl) {
+      toast.error('No high-quality video available to download');
+      return;
+    }
+    
+    // Create a temporary anchor element and trigger download
+    const a = document.createElement('a');
+    a.href = creatomateState.renderedVideoUrl;
+    a.download = `${topic?.title.replace(/\s+/g, '-').toLowerCase() || 'high-quality-video'}.mp4`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    
+    toast.success('High-quality video download started!');
   };
   
   // Function to download the video or slideshow
@@ -1080,27 +1198,146 @@ export default function MediaPage() {
             <div className="p-6">
               {videoState.isSlideshow && videoState.slideshowData ? (
                 <div className="space-y-4">
-                  <div className="bg-muted/30 rounded-lg overflow-hidden">
-                    <RemotionPlayer
-                      data={videoState.slideshowData}
-                      className="w-full"
-                    />
-                  </div>
-                  
-                  <div className="bg-muted/20 rounded-lg p-3 mt-2">
-                    <div className="flex items-start">
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2 text-muted-foreground mt-0.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <circle cx="12" cy="12" r="10"></circle>
-                        <path d="M12 16v-4"></path>
-                        <path d="M12 8h.01"></path>
-                      </svg>
-                      <div>
-                        <p className="text-xs text-muted-foreground">
-                          Your video is ready! You can use the controls to navigate through the images while listening to the narration.
-                        </p>
+                  <Tabs defaultValue="preview" className="w-full">
+                    <TabsList className="grid grid-cols-2">
+                      <TabsTrigger value="preview">Preview</TabsTrigger>
+                      <TabsTrigger value="export">Export Options</TabsTrigger>
+                    </TabsList>
+                    
+                    <TabsContent value="preview" className="space-y-4">
+                      <div className="bg-muted/30 rounded-lg overflow-hidden">
+                        <RemotionPlayer
+                          data={videoState.slideshowData}
+                          className="w-full"
+                        />
                       </div>
-                    </div>
-                  </div>
+                      
+                      <div className="bg-muted/20 rounded-lg p-3 mt-2">
+                        <div className="flex items-start">
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2 text-muted-foreground mt-0.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <circle cx="12" cy="12" r="10"></circle>
+                            <path d="M12 16v-4"></path>
+                            <path d="M12 8h.01"></path>
+                          </svg>
+                          <div>
+                            <p className="text-xs text-muted-foreground">
+                              Your video is ready! You can use the controls to navigate through the images while listening to the narration.
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    </TabsContent>
+                    
+                    <TabsContent value="export" className="space-y-4">
+                      <div className="bg-card rounded-lg border overflow-hidden">
+                        <div className="p-4 border-b bg-muted/20">
+                          <h3 className="text-base font-medium">Video Export Options</h3>
+                        </div>
+                        
+                        <div className="p-4 space-y-4">
+                          <div className="flex flex-col space-y-4">
+                            <div className="flex flex-col space-y-2">
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center">
+                                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2 text-amber-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                    <path d="m15 5 4 4-4 4"></path>
+                                    <path d="M19 9H5"></path>
+                                    <path d="M15 19 9 3"></path>
+                                  </svg>
+                                  <span className="font-medium">Render High Quality Video</span>
+                                </div>
+                                
+                                {creatomateState.renderedVideoUrl && (
+                                  <span className="text-xs bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 px-2 py-1 rounded-full">
+                                    Ready
+                                  </span>
+                                )}
+                              </div>
+                              
+                              <p className="text-xs text-muted-foreground ml-7">
+                                Create a professional, high-quality video with smooth transitions and Ken Burns effects.
+                              </p>
+                              
+                              {creatomateState.isRendering && (
+                                <div className="ml-7 space-y-2 mt-2">
+                                  <Progress value={creatomateState.renderProgress} className="w-full h-2" />
+                                  <p className="text-xs text-muted-foreground">
+                                    Rendering high-quality video... {creatomateState.renderProgress}%
+                                  </p>
+                                </div>
+                              )}
+                              
+                              {creatomateState.renderedVideoUrl && (
+                                <div className="ml-7 mt-2">
+                                  <div className="rounded-md border overflow-hidden bg-muted/10">
+                                    <div className="aspect-video">
+                                      <video 
+                                        controls 
+                                        className="w-full h-full" 
+                                        src={creatomateState.renderedVideoUrl}
+                                        poster={imageState[0]?.url || undefined}
+                                      >
+                                        Your browser does not support the video tag.
+                                      </video>
+                                    </div>
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                            
+                            <div className="flex flex-wrap gap-2 ml-7">
+                              <Button
+                                onClick={renderHighQualityVideo}
+                                disabled={creatomateState.isRendering}
+                                className="flex items-center"
+                                variant={creatomateState.renderedVideoUrl ? "outline" : "default"}
+                              >
+                                {creatomateState.isRendering ? (
+                                  <>
+                                    <div className="size-4 border-2 border-current/30 border-t-current rounded-full animate-spin mr-2"></div>
+                                    Rendering...
+                                  </>
+                                ) : creatomateState.renderedVideoUrl ? (
+                                  <>
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                      <path d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                                    </svg>
+                                    Re-render
+                                  </>
+                                ) : (
+                                  <>
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                      <path d="M13 3H4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-3"></path>
+                                      <path d="M8 21h8"></path>
+                                      <path d="M12 17v4"></path>
+                                      <path d="m22 3-5 5"></path>
+                                      <path d="m17 3 5 5"></path>
+                                    </svg>
+                                    Render High Quality
+                                  </>
+                                )}
+                              </Button>
+                              
+                              {creatomateState.renderedVideoUrl && (
+                                <Button 
+                                  onClick={downloadHighQualityVideo}
+                                  className="flex items-center justify-center"
+                                  variant="default"
+                                >
+                                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                                    <polyline points="7 10 12 15 17 10" />
+                                    <line x1="12" y1="15" x2="12" y2="3" />
+                                  </svg>
+                                  Download High Quality MP4
+                                </Button>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </TabsContent>
+                  </Tabs>
                 </div>
               ) : videoState.url ? (
                 <div className="space-y-4">
