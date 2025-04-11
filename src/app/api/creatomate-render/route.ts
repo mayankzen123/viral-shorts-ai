@@ -79,7 +79,7 @@ export async function POST(req: Request) {
         new Creatomate.Audio({
           source: audioUrl,
           // Use natural audio duration - don't trim
-          duration: null
+          duration: undefined
         }),
       ],
       // Set a background color for the entire video
