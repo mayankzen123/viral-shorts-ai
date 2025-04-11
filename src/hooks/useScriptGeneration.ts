@@ -45,17 +45,5 @@ export function useScriptGeneration() {
     }
   }, []);
 
-  // Helper functions to generate realistic content
-  const generateHook = (topic: string, category: Category): string => {
-    const hooks = [
-      `Did you know that ${topic} is changing the way we think about ${category}?`,
-      `What if I told you that ${topic} could revolutionize ${category} as we know it?`,
-      `${topic} has become one of the most talked-about trends in ${category} - here's why.`,
-      `The truth about ${topic} might surprise you. Let's dive into this ${category} phenomenon.`,
-      `${topic} is trending for a reason. Here's what you need to know about this ${category} breakthrough.`
-    ];
-    return hooks[Math.floor(Math.random() * hooks.length)];
-  };
-
   return { script, isGenerating, error, generateScript };
 } 

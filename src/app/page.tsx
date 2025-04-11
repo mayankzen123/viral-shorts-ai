@@ -1,93 +1,13 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef } from 'react';
-import { CategoryGrid } from '@/components/CategoryGrid';
-import { TrendingTopicsList } from '@/components/TrendingTopicsList';
-import { ScriptDisplay } from '@/components/ScriptDisplay';
-import { useTrendingTopics } from '@/hooks/useTrendingTopics';
-import { useScriptGeneration } from '@/hooks/useScriptGeneration';
-import { Category, TrendingTopic } from '@/types';
-import { Toaster } from '@/components/ui/sonner';
+import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
+import { Toaster } from '@/components/ui/sonner';
 import { Header } from '@/components/Header';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
-import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { useUser } from '@clerk/nextjs';
-
-/**
- * Custom hook to enforce a minimum duration for a loading state
- * This ensures the UI shows a loading indicator for at least the specified time
- */
-function useMinimumLoadingTime(
-  state: 'idle' | 'loading' | 'success' | 'error',
-  setState: React.Dispatch<React.SetStateAction<'idle' | 'loading' | 'success' | 'error'>>,
-  minimumTime: number = 2000
-) {
-  const loadingStartTimeRef = useRef<number | null>(null);
-  const loadingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  
-  // Clean up timeout on unmount
-  useEffect(() => {
-    return () => {
-      if (loadingTimeoutRef.current) {
-        clearTimeout(loadingTimeoutRef.current);
-      }
-    };
-  }, []);
-  
-  // Force loading state to persist for minimum time
-  useEffect(() => {
-    if (state === 'loading') {
-      // Set loading start time if not already set
-      if (!loadingStartTimeRef.current) {
-        loadingStartTimeRef.current = Date.now();
-      }
-    } else if ((state === 'success' || state === 'error') && loadingStartTimeRef.current) {
-      // Calculate how long we've been in loading state
-      const loadingDuration = Date.now() - loadingStartTimeRef.current;
-      
-      if (loadingDuration < minimumTime) {
-        // If we haven't shown loading state for minimum time, revert back to loading
-        const remainingTime = minimumTime - loadingDuration;
-        
-        // Save the intended final state
-        const finalState = state;
-        
-        // Go back to loading state
-        setState('loading');
-        
-        // Schedule the real completion after remaining time
-        if (loadingTimeoutRef.current) {
-          clearTimeout(loadingTimeoutRef.current);
-        }
-        
-        loadingTimeoutRef.current = setTimeout(() => {
-          loadingStartTimeRef.current = null;
-          setState(finalState); // Set to the saved final state
-        }, remainingTime);
-      } else {
-        // Reset loading start time
-        loadingStartTimeRef.current = null;
-      }
-    }
-  }, [state, setState, minimumTime]);
-  
-  // Reset function to clear any pending timeouts and loading time tracking
-  const resetLoadingTimer = useCallback(() => {
-    loadingStartTimeRef.current = null;
-    if (loadingTimeoutRef.current) {
-      clearTimeout(loadingTimeoutRef.current);
-      loadingTimeoutRef.current = null;
-    }
-  }, []);
-  
-  return {
-    isEnforcingMinimumTime: loadingStartTimeRef.current !== null,
-    resetLoadingTimer
-  };
-}
 
 export default function Home() {
   const router = useRouter();
@@ -222,9 +142,9 @@ export default function Home() {
             transition={{ duration: 0.8, ease: "easeOut" }}
             className="max-w-3xl mx-auto"
           >
-            <h1 className="ghibli-title mb-6">Create Magical Short Videos with Studio Ghibli Style</h1>
+            <h1 className="ghibli-title mb-6">Create Magical Short Videos</h1>
             <p className="ghibli-subtitle mb-8 max-w-2xl mx-auto">
-              Bring your stories to life with AI-generated scripts and enchanting Studio Ghibli-inspired visuals that captivate your audience.
+              Bring your stories to life with AI-generated scripts and visuals that captivate your audience.
             </p>
                 <motion.div 
               initial={{ opacity: 0, scale: 0.9 }}
@@ -249,9 +169,9 @@ export default function Home() {
             transition={{ duration: 0.5, delay: 0.3 }}
             className="text-center mb-16"
           >
-            <h2 className="text-3xl font-bold mb-4">Create Videos with the Magic of Ghibli</h2>
+            <h2 className="text-3xl font-bold mb-4">Create Videos</h2>
             <p className="text-muted-foreground max-w-2xl mx-auto">
-              Our platform combines AI-powered content creation with the whimsical style of Studio Ghibli animations.
+              Our platform combines AI-powered content creation.
             </p>
                 </motion.div>
 
@@ -284,7 +204,7 @@ export default function Home() {
           >
             <h2 className="text-2xl font-bold mb-4">Ready to Create Something Magical?</h2>
             <p className="text-muted-foreground mb-6">
-              Join thousands of creators who are using our platform to craft engaging short-form videos with the enchanting Studio Ghibli aesthetic.
+              Join thousands of creators who are using our platform to craft engaging short-form videos.
             </p>
             <Button 
               onClick={handleGetStarted}

@@ -44,11 +44,6 @@ export function RemotionPlayer({ data, onComplete, className }: RemotionPlayerPr
     };
   }, [data.audio]);
   
-  // Validate that we have images
-  useEffect(() => {
-    // Validate images silently
-  }, [data.images]);
-  
   // Set up event listeners for player state changes
   useEffect(() => {
     const player = playerRef.current;

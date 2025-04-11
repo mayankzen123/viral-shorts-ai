@@ -74,16 +74,7 @@ async function generateScriptWithAI(topic: string, category: string, description
           "callToAction": "A 5-7 second compelling call to action that encourages subscriptions",
           "suggestedVisuals": ["Visual 1", "Visual 2", "Visual 3", "Visual 4", "Visual 5"]
         }
-        
-        IMPORTANT: For the suggestedVisuals field, provide Studio Ghibli inspired visual descriptions. These should incorporate:
-        - Whimsical, dreamlike elements with soft, vibrant colors
-        - Nature elements like clouds, trees, water, or wind
-        - Charming characters with Miyazaki-inspired features
-        - Attention to atmospheric details and lighting
-        - Magical or fantastical elements blended with the main topic
-        
-        Make sure each visual suggestion would look beautiful in the distinct Studio Ghibli art style while still being relevant to the script content.
-        
+
         The response should be ONLY valid JSON without any markdown formatting or explanations.
         Use the EXACT field names as shown above.`
       },

@@ -37,7 +37,7 @@ export async function POST(request: Request) {
     // Generate the image using OpenAI DALL-E
     const response = await openai.images.generate({
       model: "dall-e-3", // or "dall-e-2" for faster, lower quality images
-      prompt: `Create a Studio Ghibli style image with whimsical, painterly aesthetics. Use soft, vibrant colors, attention to natural elements, and dreamlike lighting characteristic of Hayao Miyazaki films. The image should be suitable for a short social media video about: ${cleanPrompt(prompt)}. Maintain the Ghibli-inspired hand-drawn animation look with detailed backgrounds and charming character design.`,
+      prompt: `Create a high-quality, professional visual for a short social media video: ${cleanPrompt(prompt)}`,
       n: 1,
       size: "1024x1024",
       quality: "standard",
