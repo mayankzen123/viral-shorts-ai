@@ -1,6 +1,9 @@
 import { NextResponse } from 'next/server';
 import OpenAI from 'openai';
 import { CacheManager } from '@/lib/utils';
+import fs from 'fs-extra';
+import path from 'path';
+import { v4 as uuidv4 } from 'uuid';
 
 // Initialize the OpenAI client
 const openai = new OpenAI({
@@ -9,6 +12,9 @@ const openai = new OpenAI({
 
 // Create a cache for audio URLs with 24-hour TTL
 const audioCache = new CacheManager<string>(24 * 60 * 60 * 1000);
+
+// Directory to store audio files
+const AUDIO_DIR = path.join(process.cwd(), 'public', 'audio');
 
 export async function POST(request: Request) {
   try {
@@ -40,12 +46,24 @@ export async function POST(request: Request) {
       input: text,
     });
     
-    // Convert to blob and then base64
+    // Convert to buffer
     const buffer = Buffer.from(await mp3.arrayBuffer());
-    const base64Audio = buffer.toString('base64');
     
-    // Create a data URL for the audio
-    const audioUrl = `data:audio/mpeg;base64,${base64Audio}`;
+    // Ensure audio directory exists
+    await fs.ensureDir(AUDIO_DIR);
+    
+    // Generate a unique numerical filename
+    // Combine timestamp with random number for uniqueness
+    const timestamp = Date.now();
+    const randomSuffix = Math.floor(Math.random() * 10000);
+    const filename = `${timestamp}${randomSuffix}-${voice}.mp3`;
+    const filePath = path.join(AUDIO_DIR, filename);
+    
+    // Write the audio file to disk
+    await fs.writeFile(filePath, buffer);
+    
+    // Create a URL path for the audio file
+    const audioUrl = `/audio/${filename}`;
 
     // Store in cache
     audioCache.set(cacheKey, audioUrl);
@@ -53,6 +71,7 @@ export async function POST(request: Request) {
     // Return the audio URL
     return NextResponse.json({ audioUrl });
   } catch (error: any) {
+    console.error('Error generating audio:', error);
     return NextResponse.json(
       { error: error.message || 'Failed to generate audio' },
       { status: 500 }
